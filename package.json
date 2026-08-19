@@ -1,0 +1,60 @@
+{
+  "name": "md2pdf-electron",
+  "version": "1.0.12",
+  "description": "Markdown to PDF converter",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win --x64",
+    "dist:mac": "electron-builder --mac",
+    "dist:all": "electron-builder --win --mac"
+  },
+  "dependencies": {
+    "docx": "^9.7.1",
+    "marked": "^18.0.2",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^25.0.0",
+    "png-to-ico": "^2.1.8",
+    "png2icons": "^2.0.1",
+    "rcedit": "^5.0.2"
+  },
+  "build": {
+    "appId": "com.internal.md2pdf",
+    "productName": "MarkMorph",
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": [
+        "zh_CN"
+      ],
+      "language": "2052",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.utilities"
+    },
+    "asarUnpack": [
+      "node_modules/sharp/**/*"
+    ]
+  }
+}

@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Background: starry night sky -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2d2b55"/>
+      <stop offset="100%" stop-color="#1a1a3e"/>
+    </radialGradient>
+    <radialGradient id="star" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff"/>
+      <stop offset="100%" stop-color="#ffe080" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="40%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#f5c842"/>
+      <stop offset="100%" stop-color="#d4a020"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Circle background -->
+  <circle cx="128" cy="128" r="128" fill="url(#bg)"/>
+
+  <!-- Stars -->
+  <circle cx="40" cy="35" r="2" fill="#fff" opacity="0.9"/>
+  <circle cx="75" cy="20" r="1.5" fill="#ffe080" opacity="0.8"/>
+  <circle cx="200" cy="30" r="2" fill="#fff" opacity="0.9"/>
+  <circle cx="220" cy="55" r="1.5" fill="#ffe080" opacity="0.7"/>
+  <circle cx="30" cy="80" r="1.5" fill="#fff" opacity="0.8"/>
+  <circle cx="55" cy="60" r="1" fill="#ffe080" opacity="0.7"/>
+  <circle cx="180" cy="15" r="1.5" fill="#fff" opacity="0.8"/>
+  <circle cx="235" cy="90" r="1" fill="#ffe080" opacity="0.6"/>
+  <circle cx="15" cy="130" r="1.5" fill="#fff" opacity="0.7"/>
+  <circle cx="240" cy="140" r="1.5" fill="#fff" opacity="0.7"/>
+  <circle cx="25" cy="180" r="1" fill="#ffe080" opacity="0.6"/>
+  <circle cx="50" cy="220" r="1.5" fill="#fff" opacity="0.5"/>
+
+  <!-- Small planet -->
+  <ellipse cx="128" cy="195" rx="45" ry="20" fill="url(#planet)"/>
+  <ellipse cx="128" cy="195" rx="45" ry="20" fill="none" stroke="#c49018" stroke-width="1"/>
+  <!-- Planet surface details -->
+  <ellipse cx="115" cy="192" rx="6" ry="3" fill="#c49018" opacity="0.4"/>
+  <ellipse cx="140" cy="198" rx="4" ry="2" fill="#c49018" opacity="0.3"/>
+
+  <!-- Rose on the planet (left side) -->
+  <line x1="100" y1="188" x2="100" y2="170" stroke="#3a8a3a" stroke-width="2"/>
+  <ellipse cx="100" cy="166" rx="5" ry="7" fill="#e84060"/>
+  <ellipse cx="97" cy="167" rx="4" ry="5" fill="#ff5070" opacity="0.7"/>
+  <path d="M95 178 Q93 175 90 177" stroke="#3a8a3a" stroke-width="1.5" fill="none"/>
+
+  <!-- Little Prince figure -->
+  <!-- Body -->
+  <path d="M128 175 L128 130" stroke="none" fill="none"/>
+  <!-- Coat/outfit - blue-green -->
+  <path d="M118 170 L120 145 Q128 140 136 145 L138 170 Z" fill="#4a90b8"/>
+  <!-- Collar -->
+  <path d="M121 145 Q128 148 135 145 Q128 152 121 145" fill="#f5c842"/>
+
+  <!-- Scarf flowing -->
+  <path d="M135 143 Q145 135 155 140 Q148 145 155 152 Q145 148 140 155" fill="#f5c842" opacity="0.9"/>
+  <path d="M155 140 Q160 138 165 142" stroke="#e8a820" stroke-width="1" fill="none"/>
+
+  <!-- Arms -->
+  <line x1="120" y1="150" x2="110" y2="160" stroke="#4a90b8" stroke-width="4" stroke-linecap="round"/>
+  <line x1="136" y1="150" x2="146" y2="160" stroke="#4a90b8" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Legs -->
+  <line x1="123" y1="170" x2="121" y2="185" stroke="#2a2a5a" stroke-width="3" stroke-linecap="round"/>
+  <line x1="133" y1="170" x2="135" y2="185" stroke="#2a2a5a" stroke-width="3" stroke-linecap="round"/>
+  <!-- Boots -->
+  <ellipse cx="120" cy="187" rx="4" ry="3" fill="#2a2a5a"/>
+  <ellipse cx="136" cy="187" rx="4" ry="3" fill="#2a2a5a"/>
+
+  <!-- Head -->
+  <circle cx="128" cy="125" r="18" fill="#fde8c8"/>
+  <!-- Hair - golden fluffy -->
+  <path d="M110 120 Q112 100 128 98 Q144 100 146 120 Q142 108 128 106 Q114 108 110 120" fill="#f5c842"/>
+  <path d="M112 122 Q110 112 115 105 Q112 110 113 118" fill="#e8b820" opacity="0.5"/>
+  <path d="M144 122 Q146 112 141 105 Q144 110 143 118" fill="#e8b820" opacity="0.5"/>
+  <!-- Spiky hair top -->
+  <path d="M120 105 Q118 95 122 98 Q125 92 128 97 Q131 91 134 98 Q138 95 136 105" fill="#f5c842"/>
+
+  <!-- Face -->
+  <!-- Eyes -->
+  <circle cx="122" cy="124" r="2.5" fill="#2a2a5a"/>
+  <circle cx="134" cy="124" r="2.5" fill="#2a2a5a"/>
+  <circle cx="122.8" cy="123.2" r="0.8" fill="#fff"/>
+  <circle cx="134.8" cy="123.2" r="0.8" fill="#fff"/>
+  <!-- Gentle smile -->
+  <path d="M123 132 Q128 136 133 132" stroke="#c08060" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Rosy cheeks -->
+  <circle cx="118" cy="130" r="3" fill="#ffb0a0" opacity="0.4"/>
+  <circle cx="138" cy="130" r="3" fill="#ffb0a0" opacity="0.4"/>
+
+  <!-- Document/scroll in hand (representing the converter tool) -->
+  <rect x="105" y="156" width="10" height="14" rx="1" fill="#fff" stroke="#ccc" stroke-width="0.5" transform="rotate(-10, 110, 163)"/>
+  <line x1="107" y1="160" x2="113" y2="159" stroke="#aaa" stroke-width="0.5" transform="rotate(-10, 110, 163)"/>
+  <line x1="107" y1="163" x2="113" y2="162" stroke="#aaa" stroke-width="0.5" transform="rotate(-10, 110, 163)"/>
+  <line x1="107" y1="166" x2="111" y2="165" stroke="#aaa" stroke-width="0.5" transform="rotate(-10, 110, 163)"/>
+</svg>

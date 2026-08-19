@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MarkMorph</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Georgia", "Microsoft YaHei", serif;
+    background: url('bg.webp') center/cover no-repeat fixed;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3b2a1a;
+    position: relative;
+    overflow: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(30, 20, 50, 0.35);
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes twinkle {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    top: 40px;
+    left: 50px;
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle, rgba(255,230,150,0.4) 0%, rgba(255,200,80,0.1) 50%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* 自定义背景时降低遮罩透明度 */
+  body.custom-bg::before { background: rgba(30, 20, 50, 0.35); }
+  body.custom-bg::after { opacity: 1; }
+  body.has-preview {
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 0;
+  }
+
+  .container {
+    display: flex;
+    gap: 28px;
+    align-items: stretch;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+    z-index: 1;
+  }
+  body.has-preview .container {
+    flex-direction: column;
+    gap: 12px;
+    width: 160px;
+    padding: 12px;
+    height: 100vh;
+    justify-content: center;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.2);
+    border-radius: 24px;
+    box-shadow:
+      0 0 15px rgba(255,220,100,0.4),
+      0 0 30px rgba(255,200,60,0.2),
+      inset 0 0 15px rgba(255,230,150,0.3);
+    border: 1.5px solid rgba(255,220,100,0.5);
+    padding: 18px 10px 8px 10px;
+    width: 280px;
+    flex-shrink: 0;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+    backdrop-filter: blur(8px);
+    overflow: visible;
+  }
+  .card-pdf::before {
+    content: '🌙';
+    position: absolute;
+    top: -38px;
+    left: -34px;
+    font-size: 66px;
+    opacity: 0.85;
+    animation: float-moon 4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .card-html::after {
+    content: '⭐';
+    position: absolute;
+    bottom: -24px;
+    right: -20px;
+    font-size: 54px;
+    opacity: 0.85;
+    animation: float-star 3s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  @keyframes float-moon {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-12px) rotate(20deg); }
+  }
+  @keyframes float-star {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(-25deg); }
+  }
+  .card-word::before {
+    content: '📖';
+    position: absolute;
+    top: -12px;
+    right: -10px;
+    font-size: 30px;
+    opacity: 0.85;
+    animation: float-book 3.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  @keyframes float-book {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-5px) rotate(5deg); }
+  }
+  body.has-preview .card {
+    width: 100%;
+    padding: 12px 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(60,30,10,0.15);
+  }
+  .card-title { font-size: 15px; font-weight: 700; margin-bottom: 20px; color: #5a3a1a; letter-spacing: 0.5px; }
+  body.has-preview .card-title { font-size: 12px; margin-bottom: 8px; }
+  .card-title .badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    font-weight: 600;
+    vertical-align: middle;
+    letter-spacing: 0.3px;
+  }
+  .card-pdf .badge { background: linear-gradient(135deg, #ffe0d0, #ffc8b0); color: #a0402a; border: 1px solid rgba(180,80,40,0.15); }
+  .card-html .badge { background: linear-gradient(135deg, #fff0d0, #ffe4a0); color: #7a5a1a; border: 1px solid rgba(160,120,40,0.15); }
+  .card-word .badge { background: linear-gradient(135deg, #d0e8ff, #b8d8ff); color: #2a608a; border: 1px solid rgba(40,100,180,0.15); }
+
+  .drop-zone {
+    border: none;
+    border-radius: 10px;
+    padding: 25px 13px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(6px);
+    outline: 2.5px solid transparent;
+    outline-offset: -2.5px;
+  }
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    border: 2.5px solid rgba(180,130,60,0.35);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect x='2' y='2' width='196' height='196' rx='10' fill='none' stroke='black' stroke-width='4' stroke-dasharray='12 6' stroke-linecap='round'/%3E%3C/svg%3E");
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect x='2' y='2' width='196' height='196' rx='10' fill='none' stroke='black' stroke-width='4' stroke-dasharray='12 6' stroke-linecap='round'/%3E%3C/svg%3E");
+    mask-size: 100% 100%;
+    -webkit-mask-size: 100% 100%;
+    pointer-events: none;
+    animation: wave-border 3s ease-in-out infinite;
+  }
+  @keyframes wave-border {
+    0%, 100% { border-radius: 10px 14px 10px 14px; }
+    25% { border-radius: 14px 10px 14px 10px; }
+    50% { border-radius: 12px 16px 12px 16px; }
+    75% { border-radius: 16px 12px 16px 12px; }
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    background: rgba(255,240,210,0.6);
+    box-shadow: inset 0 0 12px rgba(180,130,60,0.1);
+  }
+  .drop-zone:hover::before, .drop-zone.drag-over::before {
+    border-color: #a07030;
+  }
+  .drop-zone input[type="file"] { display: none; }
+  .drop-icon { font-size: 28px; margin-bottom: 8px; transition: font-size 0.3s; }
+  .drop-text { font-size: 12px; color: #6b4a2a; line-height: 1.6; transition: font-size 0.3s; }
+  .drop-text span { color: #9a7a5a; font-size: 11px; display: block; margin-top: 4px; }
+  body.has-preview .drop-zone { padding: 12px 8px; }
+  body.has-preview .drop-icon { font-size: 18px; margin-bottom: 4px; }
+  body.has-preview .drop-text { font-size: 10px; }
+  body.has-preview .drop-text span { display: none; }
+
+  .status { margin-top: 16px; min-height: 24px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .status.hidden { visibility: hidden; }
+  .status.loading { color: #8b6a3a; }
+  .status.success { color: #4a7a2a; }
+  .status.error { color: #9b3a2a; }
+  body.has-preview .status { margin-top: 6px; min-height: 18px; font-size: 10px; }
+  .spinner { width: 12px; height: 12px; border: 2px solid rgba(180,130,60,0.2); border-top-color: #a07030; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .preview-panel {
+    position: fixed; top: 0; right: -100vw; width: calc(100vw - 184px); height: 100vh;
+    background: linear-gradient(180deg, #fefcf6 0%, #faf5ea 100%);
+    box-shadow: -6px 0 30px rgba(60,30,10,0.15);
+    display: flex; flex-direction: column;
+    transition: right 0.35s cubic-bezier(0.4,0,0.2,1); z-index: 100;
+    border-left: 2px solid rgba(180,130,60,0.2);
+  }
+  .preview-panel.open { right: 0; }
+  .preview-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(180,130,60,0.15);
+    flex-shrink: 0;
+    background: linear-gradient(90deg, #f8f0e0, #fdf8f0);
+  }
+  .preview-title { font-size: 13px; font-weight: 700; color: #5a3a1a; }
+  .preview-filename { font-size: 12px; color: #8b6a3a; margin-left: 8px; font-weight: normal; font-style: italic; }
+  .btn-close {
+    background: none; border: none; cursor: pointer; font-size: 18px;
+    color: #9a7a5a; padding: 0 4px; line-height: 1;
+  }
+  .btn-close:hover { color: #4a2c17; }
+  .btn-download {
+    background: linear-gradient(135deg, #c08030, #d4943a);
+    color: #fff; border: none; border-radius: 8px;
+    padding: 7px 16px; font-size: 12px; cursor: pointer; font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(160,100,30,0.3);
+    letter-spacing: 0.3px;
+  }
+  .btn-download:hover { background: linear-gradient(135deg, #a06820, #c08030); box-shadow: 0 3px 12px rgba(160,100,30,0.4); }
+  .btn-download:disabled { background: linear-gradient(135deg, #d4b882, #e0c892); cursor: not-allowed; box-shadow: none; }
+  .preview-actions { display: flex; align-items: center; gap: 10px; }
+  .preview-iframe { flex: 1; border: none; width: 100%; }
+
+  .btn-bg {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,248,235,0.85);
+    box-shadow: 0 2px 10px rgba(60,30,10,0.2);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .btn-bg:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 14px rgba(60,30,10,0.3);
+  }
+
+  /* ====== 背景选择面板 ====== */
+  .bg-picker {
+    position: fixed;
+    bottom: 60px;
+    right: 16px;
+    width: 280px;
+    background: rgba(30,20,50,0.92);
+    border-radius: 12px;
+    border: 1px solid rgba(255,220,100,0.3);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+    padding: 12px;
+    z-index: 250;
+    display: none;
+    backdrop-filter: blur(12px);
+  }
+  .bg-picker.open { display: block; }
+  .bg-picker-title {
+    color: rgba(255,230,180,0.9);
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+  }
+  .bg-picker-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .bg-picker-thumb {
+    aspect-ratio: 16/10;
+    border-radius: 6px;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .bg-picker-thumb:hover {
+    border-color: rgba(255,220,100,0.8);
+    transform: scale(1.05);
+  }
+  .bg-picker-thumb.active {
+    border-color: #d4943a;
+    box-shadow: 0 0 8px rgba(200,150,60,0.5);
+  }
+  .bg-picker-custom {
+    width: 100%;
+    padding: 6px 0;
+    background: rgba(255,255,255,0.1);
+    border: 1px dashed rgba(255,220,100,0.3);
+    border-radius: 6px;
+    color: rgba(255,230,180,0.8);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .bg-picker-custom:hover {
+    background: rgba(255,255,255,0.18);
+    border-color: rgba(255,220,100,0.6);
+  }
+
+  /* ====== 布局切换按钮 ====== */
+  .btn-layout {
+    position: fixed;
+    bottom: 60px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,248,235,0.85);
+    box-shadow: 0 2px 10px rgba(60,30,10,0.2);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+    color: #8b6a3a;
+  }
+  .btn-layout:hover {
+    transform: scale(1.1);
+    box-shadow: 0 3px 14px rgba(60,30,10,0.3);
+  }
+  /* 锁定状态高亮 */
+  body.layout-locked .btn-layout {
+    background: rgba(200,160,80,0.9);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(200,150,60,0.5);
+  }
+
+  /* ====== 竖屏模式 ====== */
+  body.portrait .container {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  body.portrait .card {
+    width: 280px;
+  }
+  /* 竖屏时预览不缩卡片，预览面板叠加覆盖 */
+  body.portrait.has-preview .container {
+    width: auto;
+    padding: 20px;
+    height: auto;
+    justify-content: flex-start;
+    flex-direction: column;
+    gap: 20px;
+  }
+  body.portrait.has-preview .card {
+    width: 280px;
+    padding: 18px 10px 8px 10px;
+    border-radius: 24px;
+  }
+  body.portrait.has-preview .card-title {
+    font-size: 15px;
+    margin-bottom: 20px;
+  }
+  body.portrait.has-preview .drop-zone {
+    padding: 25px 13px;
+  }
+  body.portrait.has-preview .drop-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  body.portrait.has-preview .drop-text {
+    font-size: 12px;
+  }
+  body.portrait.has-preview .drop-text span {
+    display: block;
+  }
+  body.portrait.has-preview .status {
+    margin-top: 16px;
+    min-height: 24px;
+    font-size: 11px;
+  }
+  /* 竖屏预览面板叠加模式 */
+  body.portrait .preview-panel {
+    width: 100vw;
+    z-index: 300;
+  }
+
+  /* ====== 水印 ====== */
+  .watermark {
+    position: fixed;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    pointer-events: none;
+    font-family: "Georgia", serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="watermark" id="watermark"></div>
+<button class="btn-layout" id="layoutBtn" title="切换横竖屏布局">↕</button>
+<button class="btn-bg" id="bgBtn" title="更换背景图片">🎨</button>
+<div class="bg-picker" id="bgPicker">
+  <div class="bg-picker-title">选择内置背景</div>
+  <div class="bg-picker-grid" id="bgPickerGrid"></div>
+  <button class="bg-picker-custom" id="bgPickerCustom">选择自定义图片…</button>
+</div>
+<div class="container">
+  <div class="card card-pdf">
+    <div class="card-title">MD → PDF <span class="badge">PDF</span></div>
+    <div class="drop-zone" id="dropZonePdf">
+      <input type="file" id="fileInputPdf" accept=".md">
+      <div class="drop-icon">📄</div>
+      <div class="drop-text">
+        拖入或点击选择 .md 文件
+        <span>转换为 PDF 文件</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusPdf"></div>
+  </div>
+
+  <div class="card card-html">
+    <div class="card-title">MD → HTML <span class="badge">HTML</span></div>
+    <div class="drop-zone" id="dropZoneHtml">
+      <input type="file" id="fileInputHtml" accept=".md">
+      <div class="drop-icon">🌐</div>
+      <div class="drop-text">
+        拖入或点击选择 .md 文件
+        <span>转换为 HTML 并在浏览器中查看</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusHtml"></div>
+  </div>
+
+  <div class="card card-word">
+    <div class="card-title">MD → Word <span class="badge">DOCX</span></div>
+    <div class="drop-zone" id="dropZoneWord">
+      <input type="file" id="fileInputWord" accept=".md">
+      <div class="drop-icon">📝</div>
+      <div class="drop-text">
+        拖入或点击选择 .md 文件
+        <span>转换为 Word 文档</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusWord"></div>
+  </div>
+</div>
+
+<div class="preview-panel" id="previewPanel">
+  <div class="preview-header">
+    <div>
+      <span class="preview-title">预览</span>
+      <span class="preview-filename" id="previewFilename"></span>
+    </div>
+    <div class="preview-actions">
+      <button class="btn-download" id="downloadBtn">下载 PDF</button>
+      <button class="btn-close" id="closeBtn">×</button>
+    </div>
+  </div>
+  <iframe class="preview-iframe" id="previewFrame"></iframe>
+</div>
+
+<script>
+  // 阻止全局拖放默认行为（防止浏览器直接打开文件）
+  document.addEventListener('dragover', (e) => e.preventDefault());
+  document.addEventListener('drop', (e) => e.preventDefault());
+
+  const previewPanel = document.getElementById('previewPanel');
+  const previewFrame = document.getElementById('previewFrame');
+  const previewFilename = document.getElementById('previewFilename');
+  const closeBtn = document.getElementById('closeBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  function setStatus(el, type, html) {
+    el.className = 'status ' + type;
+    el.innerHTML = html;
+  }
+
+  function setupDropZone(dropZone, fileInput, statusEl, handler) {
+    console.log('setupDropZone called for', dropZone.id);
+    dropZone.addEventListener('click', (e) => {
+      console.log('Drop zone clicked', dropZone.id);
+      fileInput.click();
+    });
+    fileInput.addEventListener('change', () => {
+      console.log('File input changed', fileInput.id, fileInput.files[0]);
+      if (fileInput.files[0]) handler(fileInput.files[0], statusEl);
+      fileInput.value = '';
+    });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      console.log('File dropped', file);
+      if (file) handler(file, statusEl);
+    });
+  }
+
+  // PDF 入口
+  async function handlePdf(file, statusEl) {
+    if (!file || !file.name.endsWith('.md')) {
+      setStatus(statusEl, 'error', '请选择 .md 格式文件');
+      return;
+    }
+    setStatus(statusEl, 'loading', '<div class="spinner"></div> 加载预览...');
+    const content = await readFile(file);
+    try {
+      const srcPath = safeGetFilePath(file);
+      const html = await window.api.previewMd(content, srcPath);
+      previewFrame.srcdoc = html;
+      previewFilename.textContent = file.name;
+      downloadBtn.textContent = '下载 PDF';
+      previewPanel.classList.add('open');
+      document.body.classList.add('has-preview');
+      setStatus(statusEl, 'success', '预览已就绪，点击「下载 PDF」保存到指定目录');
+
+      // 记录当前任务
+      previewPanel._pendingTask = { type: 'pdf', content, filename: file.name, srcPath, statusEl };
+    } catch (err) {
+      setStatus(statusEl, 'error', err.message);
+    }
+  }
+
+  // HTML 入口 → 先预览再下载（和 PDF 一致的两步流程）
+  async function handleHtml(file, statusEl) {
+    if (!file || !file.name.endsWith('.md')) {
+      setStatus(statusEl, 'error', '请选择 .md 格式文件');
+      return;
+    }
+    setStatus(statusEl, 'loading', '<div class="spinner"></div> 加载预览...');
+    const content = await readFile(file);
+    try {
+      const srcPath = safeGetFilePath(file);
+      const html = await window.api.previewMd(content, srcPath);
+      previewFrame.srcdoc = html;
+      previewFilename.textContent = file.name;
+      downloadBtn.textContent = '下载 HTML';
+      previewPanel.classList.add('open');
+      document.body.classList.add('has-preview');
+      setStatus(statusEl, 'success', '预览已就绪，点击「下载 HTML」保存到指定目录');
+
+      previewPanel._pendingTask = { type: 'html', content, filename: file.name, srcPath, statusEl };
+    } catch (err) {
+      setStatus(statusEl, 'error', err.message);
+    }
+  }
+
+  // Word 入口
+  async function handleWord(file, statusEl) {
+    if (!file || !file.name.endsWith('.md')) {
+      setStatus(statusEl, 'error', '请选择 .md 格式文件');
+      return;
+    }
+    setStatus(statusEl, 'loading', '<div class="spinner"></div> 生成 Word...');
+    const content = await readFile(file);
+    try {
+      const result = await window.api.convertWord(content, file.name, safeGetFilePath(file));
+      if (result.success) {
+        setStatus(statusEl, 'success', '已保存并打开：' + result.filePath.split('\\').pop());
+      } else {
+        setStatus(statusEl, 'error', '已取消');
+      }
+    } catch (err) {
+      setStatus(statusEl, 'error', err.message);
+    }
+  }
+
+  function readFile(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsText(file, 'utf-8');
+    });
+  }
+
+  // 安全获取文件本地路径：即使 preload 未提供 getFilePath 也不崩溃（优雅降级为空，仅影响相对图片路径解析）
+  function safeGetFilePath(file) {
+    try {
+      if (window.api && typeof window.api.getFilePath === 'function') {
+        return window.api.getFilePath(file) || '';
+      }
+    } catch (e) {}
+    return (file && file.path) || '';
+  }
+
+  // PDF 预览面板关闭 → 仅关闭预览，不自动生成
+  closeBtn.addEventListener('click', () => {
+    previewPanel.classList.remove('open');
+    document.body.classList.remove('has-preview');
+  });
+
+  // 下载按钮 → 根据任务类型下载 PDF 或 HTML
+  downloadBtn.addEventListener('click', async () => {
+    const task = previewPanel._pendingTask;
+    if (!task) return;
+
+    if (task.type === 'pdf') {
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '生成中...';
+      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 PDF...');
+
+      try {
+        const result = await window.api.downloadPdf(task.content, task.filename, task.srcPath || '');
+        if (result.success) {
+          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+          downloadBtn.textContent = '下载完成 ✓';
+          downloadBtn.disabled = false;
+          setTimeout(() => { downloadBtn.textContent = '下载 PDF'; }, 3000);
+        } else {
+          setStatus(task.statusEl, 'error', '已取消');
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = '下载 PDF';
+        }
+      } catch (err) {
+        setStatus(task.statusEl, 'error', err.message);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载 PDF';
+      }
+    } else if (task.type === 'html') {
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '生成中...';
+      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 HTML...');
+
+      try {
+        const result = await window.api.convertHtml(task.content, task.filename, task.srcPath || '');
+        if (result.success) {
+          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+          downloadBtn.textContent = '下载完成 ✓';
+          downloadBtn.disabled = false;
+          setTimeout(() => { downloadBtn.textContent = '下载 HTML'; }, 3000);
+        } else {
+          setStatus(task.statusEl, 'error', '已取消');
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = '下载 HTML';
+        }
+      } catch (err) {
+        setStatus(task.statusEl, 'error', err.message);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载 HTML';
+      }
+    }
+  });
+
+  setupDropZone(
+    document.getElementById('dropZonePdf'),
+    document.getElementById('fileInputPdf'),
+    document.getElementById('statusPdf'),
+    handlePdf
+  );
+  setupDropZone(
+    document.getElementById('dropZoneHtml'),
+    document.getElementById('fileInputHtml'),
+    document.getElementById('statusHtml'),
+    handleHtml
+  );
+  setupDropZone(
+    document.getElementById('dropZoneWord'),
+    document.getElementById('fileInputWord'),
+    document.getElementById('statusWord'),
+    handleWord
+  );
+
+  // ====== 背景替换功能 ======
+  const bgBtn = document.getElementById('bgBtn');
+  const bgPicker = document.getElementById('bgPicker');
+  const bgPickerGrid = document.getElementById('bgPickerGrid');
+  const bgPickerCustom = document.getElementById('bgPickerCustom');
+
+  // 内置背景列表（相对于 renderer 目录）
+  const BUILTIN_BGS = [
+    'builtin-bg/星空.webp',
+    'builtin-bg/小王子插画1.webp@watermark=0',
+    'builtin-bg/小王子插画2.webp@watermark=0',
+    'builtin-bg/小王子插画3.webp@watermark=0',
+    'builtin-bg/小王子插画4.webp@watermark=0',
+    'builtin-bg/小王子插画5.jpg',
+    'builtin-bg/小王子插画6.jpg',
+    'builtin-bg/小王子插画7.jpg',
+  ];
+  const DEFAULT_BG = 'bg.webp';
+
+  let currentBgPath = null;  // null = 使用默认
+
+  function applyBackground(filePath) {
+    if (filePath) {
+      document.body.style.backgroundImage = 'url("file:///' + filePath.replace(/\\/g, '/') + '?t=' + Date.now() + '")';
+      document.body.classList.add('custom-bg');
+      currentBgPath = filePath;
+    } else {
+      // 重置为默认背景
+      document.body.style.backgroundImage = 'url("' + DEFAULT_BG + '")';
+      document.body.classList.remove('custom-bg');
+      currentBgPath = null;
+    }
+    updateThumbActive();
+  }
+
+  // 应用内置背景（相对路径）
+  function applyBuiltinBg(relPath) {
+    document.body.style.backgroundImage = 'url("' + relPath + '?t=' + Date.now() + '")';
+    document.body.classList.remove('custom-bg');
+    currentBgPath = null;
+    updateThumbActive();
+  }
+
+  // 更新缩略图高亮
+  function updateThumbActive() {
+    document.querySelectorAll('.bg-picker-thumb').forEach(t => t.classList.remove('active'));
+  }
+
+  // 生成内置背景缩略图
+  BUILTIN_BGS.forEach((bgPath, index) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'bg-picker-thumb';
+    thumb.style.backgroundImage = 'url("' + bgPath + '")';
+    thumb.title = bgPath.replace('builtin-bg/', '').replace(/@watermark=0/, '');
+    thumb.addEventListener('click', () => {
+      applyBuiltinBg(bgPath);
+      bgPicker.classList.remove('open');
+    });
+    bgPickerGrid.appendChild(thumb);
+  });
+
+  // 🎨 按钮 → 展开/收起背景面板
+  bgBtn.addEventListener('click', () => {
+    bgPicker.classList.toggle('open');
+  });
+
+  // 点击面板外关闭
+  document.addEventListener('click', (e) => {
+    if (!bgPicker.contains(e.target) && e.target !== bgBtn) {
+      bgPicker.classList.remove('open');
+    }
+  });
+
+  // 选择自定义图片
+  bgPickerCustom.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    bgPicker.classList.remove('open');
+    const filePath = await window.api.selectBackground();
+    if (filePath) applyBackground(filePath);
+  });
+
+  // 右键重置为默认背景
+  bgBtn.addEventListener('contextmenu', async (e) => {
+    e.preventDefault();
+    if (confirm('确定要重置为默认背景吗？')) {
+      const result = await window.api.resetBackground();
+      if (result.success) {
+        applyBackground(null);
+      }
+    }
+  });
+
+  // 启动时加载已保存的背景
+  window.api.getBackground().then(p => { if (p) applyBackground(p); });
+
+  // ====== 横竖屏自适应布局 ======
+  const layoutBtn = document.getElementById('layoutBtn');
+  let layoutLocked = false;       // 是否手动锁定布局
+  let lockedMode = null;          // 锁定的模式 'portrait' | 'landscape'
+
+  const THRESHOLD = 1.2;          // 宽度 < 高度 × 1.2 时切竖屏
+
+  function detectLayout() {
+    return (window.innerWidth < window.innerHeight * THRESHOLD) ? 'portrait' : 'landscape';
+  }
+
+  function applyLayout(mode) {
+    if (mode === 'portrait') {
+      document.body.classList.add('portrait');
+    } else {
+      document.body.classList.remove('portrait');
+    }
+    updateLayoutBtnState();
+  }
+
+  function updateLayoutBtnState() {
+    if (layoutLocked) {
+      document.body.classList.add('layout-locked');
+      layoutBtn.title = '布局已锁定（点击解锁）';
+    } else {
+      document.body.classList.remove('layout-locked');
+      const current = detectLayout();
+      layoutBtn.title = `当前：${current === 'portrait' ? '竖屏' : '横屏'}（点击切换屏幕视图）`;
+    }
+  }
+
+  // 自动检测
+  function autoLayout() {
+    if (layoutLocked) return;
+    applyLayout(detectLayout());
+  }
+
+  // 窗口大小变化监听（防抖）
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(autoLayout, 150);
+  });
+
+  // 手动切换按钮
+  layoutBtn.addEventListener('click', () => {
+    if (layoutLocked) {
+      // 解锁：恢复自动模式
+      layoutLocked = false;
+      lockedMode = null;
+      autoLayout();
+    } else {
+      // 锁定：切换到另一个模式
+      layoutLocked = true;
+      const current = detectLayout();
+      lockedMode = (current === 'portrait') ? 'landscape' : 'portrait';
+      applyLayout(lockedMode);
+      window.api.resizeLayout(lockedMode);
+    }
+  });
+
+  // 初始检测
+  autoLayout();
+
+  // ====== 水印 ======
+  document.getElementById('watermark').textContent = 'MarkMorph by cmj @20260809';
+</script>
+</body>
+</html>
