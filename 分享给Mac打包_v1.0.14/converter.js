@@ -1,6 +1,7 @@
 const { marked } = require('marked');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, PageOrientation, ImageRun, TableLayoutType } = require('docx');
 
 // 将本地图片读取为 base64 data URI，使其在 data: 页面 / PDF / 离线 HTML 中都能显示
@@ -128,8 +129,10 @@ function groupImageRows(html) {
   });
 }
 
-function buildHtml(mdContent, basedir) {
+function buildHtml(mdContent, basedir, mermaidSrc) {
   const useA3 = hasWideTable(mdContent);
+  // Mermaid 库本地化：默认加载随应用分发的本地文件，避免依赖 CDN（jsdelivr 在国内常被重置连接）
+  const MERMAID_SRC = mermaidSrc || pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
   const renderer = new marked.Renderer();
   renderer.code = function({ text, lang }) {
     if (lang === 'mermaid') {
@@ -306,6 +309,16 @@ function buildHtml(mdContent, basedir) {
     #main { margin-left: 0; padding: 20px; max-width: 100%; }
     .mermaid { page-break-inside: avoid; }
     table { page-break-inside: avoid; }
+
+    /* 打印字号：屏幕字号（px）按 96DPI 1:1 打印会偏小（14px≈10.5pt），
+       这里用 pt 放大到接近 Word 默认档位 */
+    body { font-size: 12pt; }          /* 正文 12pt */
+    h1 { font-size: 22pt; }
+    h2 { font-size: 17pt; }
+    h3 { font-size: 14pt; }
+    h4 { font-size: 12.5pt; }
+    table { font-size: 11pt; }         /* 表格 11pt */
+    code { font-size: 10.5pt; }        /* 代码 10.5pt */
   }
 </style>
 </head>
@@ -414,7 +427,7 @@ ${bodyHtml}
     });
   })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="${MERMAID_SRC}"></script>
 <script>
   try {
     if (typeof mermaid !== 'undefined') {

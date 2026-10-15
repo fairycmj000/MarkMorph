@@ -5,6 +5,10 @@ const { PDFDocument, PDFName, PDFArray, PDFDict, PDFHexString, PDFNull, PDFNumbe
 const { buildHtml, extractHeadings, buildDocx, extractMermaidBlocks, hasWideTable } = require('./converter');
 const { Packer } = require('docx');
 const sharp = require('sharp');
+const { pathToFileURL } = require('url');
+
+// Mermaid 库本地化：随应用分发的本地 mermaid.min.js，避免依赖 CDN
+const MERMAID_SRC = pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
 
 let mainWindow = null;
 
@@ -469,7 +473,7 @@ async function renderMermaidToPngs(mdContent) {
 </head>
 <body>
 ${mermaidBlocks.map((code, i) => `<div class="mermaid-wrap"><div class="mermaid" id="m${i}">${code}</div></div>`).join('\n')}
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="${MERMAID_SRC}"></script>
 <script>
   mermaid.initialize({
     startOnLoad: true,

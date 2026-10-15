@@ -1,6 +1,7 @@
 const { marked } = require('marked');
 const fs = require('fs');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, PageOrientation, ImageRun, TableLayoutType } = require('docx');
 
 // 将本地图片读取为 base64 data URI，使其在 data: 页面 / PDF / 离线 HTML 中都能显示
@@ -128,8 +129,10 @@ function groupImageRows(html) {
   });
 }
 
-function buildHtml(mdContent, basedir) {
+function buildHtml(mdContent, basedir, mermaidSrc) {
   const useA3 = hasWideTable(mdContent);
+  // Mermaid 库本地化：默认加载随应用分发的本地文件，避免依赖 CDN（jsdelivr 在国内常被重置连接）
+  const MERMAID_SRC = mermaidSrc || pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
   const renderer = new marked.Renderer();
   renderer.code = function({ text, lang }) {
     if (lang === 'mermaid') {
@@ -424,7 +427,7 @@ ${bodyHtml}
     });
   })();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="${MERMAID_SRC}"></script>
 <script>
   try {
     if (typeof mermaid !== 'undefined') {
