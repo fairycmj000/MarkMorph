@@ -414,12 +414,12 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   /* 导航栏折叠 / 展开 */
   #sidebar-header-top { display: flex; align-items: center; justify-content: space-between; }
   #sidebar-header-top h2 { margin-bottom: 0; }
-  .toc-actions { display: flex; align-items: center; gap: 2px; }
-  .toc-actions button {
+  .toc-title { display: flex; align-items: center; gap: 4px; }
+  #toc-toggle-all {
     border: none; background: transparent; color: #6a737d; cursor: pointer;
     font-size: 11px; line-height: 1; padding: 4px 6px; border-radius: 4px;
   }
-  .toc-actions button:hover { background: #e6e9ec; color: #0366d6; }
+  #toc-toggle-all:hover { background: #e6e9ec; color: #0366d6; }
   #collapse-btn {
     border: none;
     background: transparent;
@@ -574,12 +574,11 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
 <aside id="sidebar">
   <div id="sidebar-header">
     <div id="sidebar-header-top">
-      <h2>目录</h2>
-      <div class="toc-actions">
-        <button id="toc-expand-all" title="全部展开" aria-label="全部展开">展开</button>
-        <button id="toc-collapse-all" title="全部收起" aria-label="全部收起">收起</button>
-        <button id="collapse-btn" title="收起导航栏" aria-label="收起导航栏">«</button>
+      <div class="toc-title">
+        <h2>目录</h2>
+        <button id="toc-toggle-all" title="全部收起" aria-label="全部收起">收起</button>
       </div>
+      <button id="collapse-btn" title="收起导航栏" aria-label="收起导航栏">«</button>
     </div>
     <div id="progress-text">阅读进度 0%</div>
   </div>
@@ -700,9 +699,8 @@ ${bodyHtml}
 
     renderToc(buildTocTree().children, toc);
 
-    // 全部展开 / 全部收起
-    var tocExpandAll = document.getElementById('toc-expand-all');
-    var tocCollapseAll = document.getElementById('toc-collapse-all');
+    // 全部展开 / 全部收起（单按钮切换，位于「目录」右侧）
+    var tocToggleAll = document.getElementById('toc-toggle-all');
     function setAllToc(collapsed) {
       tocItems.forEach(function(item) {
         var node = item.node;
@@ -715,9 +713,15 @@ ${bodyHtml}
           node.toggle.textContent = '▾';
         }
       });
+      if (tocToggleAll) {
+        tocToggleAll.textContent = collapsed ? '展开' : '收起';
+        tocToggleAll.title = collapsed ? '全部展开' : '全部收起';
+        tocToggleAll.setAttribute('aria-label', collapsed ? '全部展开' : '全部收起');
+      }
     }
-    tocExpandAll.addEventListener('click', function() { setAllToc(false); });
-    tocCollapseAll.addEventListener('click', function() { setAllToc(true); });
+    tocToggleAll.addEventListener('click', function() {
+      setAllToc(tocToggleAll.textContent === '收起');
+    });
 
     var progressBar = document.getElementById('progress-bar');
     var progressText = document.getElementById('progress-text');
