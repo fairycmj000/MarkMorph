@@ -706,6 +706,7 @@
       <ul>
         <li><b>多文件合并导出</b>：多个 Markdown 合并为一个 HTML（顶部标签页 + 汇总目录 + 阅读进度条），顺序可拖拽调整、可重命名</li>
         <li><b>直接打开 .md 文件</b>：双击 .md 文件直接用 MarkMorph 以 HTML 格式预览，并可下载保存为 .html</li>
+        <li><b>预览实时同步</b>：预览时监听源文件，外部编辑保存后自动刷新</li>
       </ul>
       <h3>功能增强</h3>
       <ul>
@@ -945,6 +946,7 @@
 
       // 记录当前任务
       previewPanel._pendingTask = { type: 'pdf', content, filename: file.name, srcPath, statusEl };
+      updateWatch();
     } catch (err) {
       setStatus(statusEl, 'error', err.message);
     }
@@ -969,6 +971,7 @@
       setStatus(statusEl, 'success', '预览已就绪，点击「下载 HTML」保存到指定目录');
 
       previewPanel._pendingTask = { type: 'html', content, filename: file.name, srcPath, statusEl };
+      updateWatch();
     } catch (err) {
       setStatus(statusEl, 'error', err.message);
     }
@@ -1012,11 +1015,85 @@
     return (file && file.path) || '';
   }
 
+  // ====== 实时同步：监听正在预览的 .md 文件，外部编辑保存后自动刷新预览 ======
+  let watchedPaths = [];
+
+  // 当前预览任务涉及到的源文件路径（单文件预览 1 个，合并预览多个）
+  function sourcePathsOf(task) {
+    if (!task) return [];
+    if (task.type === 'merge') {
+      return (task.files || []).map(f => f.srcPath).filter(Boolean);
+    }
+    return task.srcPath ? [task.srcPath] : [];
+  }
+
+  async function unwatchAll() {
+    const old = watchedPaths;
+    watchedPaths = [];
+    for (const p of old) {
+      if (p) { try { await window.api.unwatchFile(p); } catch (e) {} }
+    }
+  }
+
+  // 依据当前预览任务，取消不再预览的监听、新增需要监听的源文件
+  async function updateWatch() {
+    const paths = sourcePathsOf(previewPanel._pendingTask);
+    const old = watchedPaths;
+    watchedPaths = paths;
+    for (const p of old) {
+      if (p && !paths.includes(p)) { try { await window.api.unwatchFile(p); } catch (e) {} }
+    }
+    for (const p of paths) {
+      if (p && !old.includes(p)) { try { await window.api.watchFile(p); } catch (e) {} }
+    }
+  }
+
+  // 外部保存 → 重新读取并重渲染预览，同时更新 _pendingTask 内容，保证「下载」用的也是最新内容
+  async function refreshPreview() {
+    const task = previewPanel._pendingTask;
+    if (!task || !previewPanel.classList.contains('open')) return;
+    try {
+      if (task.type === 'merge') {
+        const files = [];
+        for (const item of task.files) {
+          const res = await window.api.readMdFile(item.srcPath);
+          // 读取失败（如文件正被原子替换）时沿用旧内容，避免预览中断
+          files.push({
+            name: item.name,
+            content: (res && !res.error && res.content != null) ? res.content : item.content,
+            srcPath: item.srcPath
+          });
+        }
+        const html = await window.api.previewMerge(files);
+        previewFrame.srcdoc = html;
+        task.files = files;
+      } else {
+        const res = await window.api.readMdFile(task.srcPath);
+        if (!res || res.error || res.content == null) return;
+        const html = await window.api.previewMd(res.content, res.srcPath);
+        previewFrame.srcdoc = html;
+        task.content = res.content;
+      }
+      setStatus(task.statusEl, 'success', '已自动同步外部修改');
+    } catch (e) {
+      // 外部编辑可能正处于写入过程，忽略瞬态错误
+    }
+  }
+
+  let syncRefreshTimer = null;
+  if (window.api && typeof window.api.onFileChanged === 'function') {
+    window.api.onFileChanged(() => {
+      clearTimeout(syncRefreshTimer);
+      syncRefreshTimer = setTimeout(refreshPreview, 200);
+    });
+  }
+
   // PDF 预览面板关闭 → 仅关闭预览，不自动生成
   closeBtn.addEventListener('click', () => {
     previewPanel.classList.remove('open');
     document.body.classList.remove('has-preview');
     fitContainer();
+    unwatchAll();
   });
 
   // 下载按钮 → 根据任务类型下载 PDF 或 HTML
@@ -1263,6 +1340,7 @@
       document.body.classList.add('has-preview');
       setStatus(statusMerge, 'success', '已合并 ' + files.length + ' 个文件，点击「下载合并 HTML」导出');
       previewPanel._pendingTask = { type: 'merge', files, statusEl: statusMerge };
+      updateWatch();
     } catch (err) {
       setStatus(statusMerge, 'error', err.message);
     }
@@ -1472,6 +1550,7 @@
       document.body.classList.add('has-preview');
       setStatus(statusHtml, 'success', '预览已就绪，点击「下载 HTML」保存到指定目录');
       previewPanel._pendingTask = { type: 'html', content: result.content, filename: result.filename, srcPath: result.srcPath, statusEl: statusHtml };
+      updateWatch();
     } catch (err) {
       setStatus(statusHtml, 'error', err.message);
     }

@@ -203,6 +203,74 @@ ipcMain.handle('read-md-file', async (_, filePath) => {
   }
 });
 
+// ====== 文件实时同步：监听正在预览的 .md 文件，外部编辑保存后通知渲染层刷新 ======
+const watchedFiles = new Map(); // filePath -> dirPath
+const dirWatchers = new Map();  // dirPath -> { watcher, files:Set<basename> }
+const watchTimers = new Map();  // filePath -> timeout（防抖）
+
+function debouncedNotify(filePath) {
+  if (watchTimers.has(filePath)) clearTimeout(watchTimers.get(filePath));
+  watchTimers.set(filePath, setTimeout(() => {
+    watchTimers.delete(filePath);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('file-changed', filePath);
+    }
+  }, 300));
+}
+
+// 监听单个文件。实际监听其所在目录并按文件名过滤：
+// 兼容「先写临时文件再 rename 覆盖」的原子保存（直接 fs.watch(file) 在文件被替换后会失效）。
+function watchFile(filePath) {
+  if (!filePath || watchedFiles.has(filePath)) return;
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath);
+
+  let entry = dirWatchers.get(dir);
+  if (!entry) {
+    const files = new Set();
+    const watcher = fs.watch(dir, (eventType, filename) => {
+      if (!filename) {
+        files.forEach(f => debouncedNotify(path.join(dir, f)));
+      } else if (files.has(filename)) {
+        debouncedNotify(path.join(dir, filename));
+      }
+    });
+    watcher.on('error', () => {});
+    entry = { watcher, files };
+    dirWatchers.set(dir, entry);
+  }
+  entry.files.add(base);
+  watchedFiles.set(filePath, dir);
+}
+
+function unwatchFile(filePath) {
+  if (!filePath) return;
+  const dir = watchedFiles.get(filePath);
+  if (!dir) return;
+  const base = path.basename(filePath);
+  const entry = dirWatchers.get(dir);
+  if (entry) {
+    entry.files.delete(base);
+    if (entry.files.size === 0) {
+      entry.watcher.close();
+      dirWatchers.delete(dir);
+    }
+  }
+  watchedFiles.delete(filePath);
+  if (watchTimers.has(filePath)) {
+    clearTimeout(watchTimers.get(filePath));
+    watchTimers.delete(filePath);
+  }
+}
+
+ipcMain.handle('watch-file', async (_, filePath) => {
+  try { watchFile(filePath); } catch (e) {}
+});
+
+ipcMain.handle('unwatch-file', async (_, filePath) => {
+  try { unwatchFile(filePath); } catch (e) {}
+});
+
 // 预览：返回渲染好的 HTML 字符串
 ipcMain.handle('preview-md', async (_, { mdContent, srcPath }) => {
   return buildHtml(mdContent, basedirOf(srcPath));

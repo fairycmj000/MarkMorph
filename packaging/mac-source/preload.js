@@ -21,5 +21,8 @@ contextBridge.exposeInMainWorld('api', {
   getAppInfo: () => ipcRenderer.invoke('get-app-info'),
   resetBackground: () => ipcRenderer.invoke('reset-background'),
   readMdFile: (filePath) => ipcRenderer.invoke('read-md-file', filePath),
-  onOpenFile: (cb) => ipcRenderer.on('open-file', (_event, filePath) => cb(filePath))
+  onOpenFile: (cb) => ipcRenderer.on('open-file', (_event, filePath) => cb(filePath)),
+  watchFile: (filePath) => ipcRenderer.invoke('watch-file', filePath),
+  unwatchFile: (filePath) => ipcRenderer.invoke('unwatch-file', filePath),
+  onFileChanged: (cb) => ipcRenderer.on('file-changed', (_event, filePath) => cb(filePath))
 });
