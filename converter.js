@@ -837,7 +837,7 @@ ${bodyHtml}
 // 多个 markdown 文件合并为一个自包含 HTML：
 // 顶部可拖拽排序、可重命名的标签页（一次只显示一个文件），
 // 左侧目录按文件名分组汇总，支持跨文件跳转；文件名写入导出后的 HTML。
-function buildMergedHtml(files, mermaidSrc) {
+function buildMergedHtml(files, mermaidSrc, editable) {
   const list = (files || []).filter(f => f && typeof f.content === 'string');
   const useA3 = list.some(f => hasWideTable(f.content));
   const BASE = useA3 ? 1450 : 1000;
@@ -1228,6 +1228,7 @@ ${sectionsHtml}
 <script>
   // ===== 标签页（拖拽排序 / 双击重命名）+ 汇总目录（按文件分组，跨文件跳转） =====
   (function() {
+    var EDITABLE = ${editable ? 'true' : 'false'};
     var docs = ${docsJson};
     var docOrder = docs.map(function(_, i) { return i; });
     var active = 0;
@@ -1258,33 +1259,39 @@ ${sectionsHtml}
       docOrder.forEach(function(docIdx) {
         var tab = document.createElement('div');
         tab.className = 'tab' + (docIdx === active ? ' active' : '');
-        tab.setAttribute('draggable', 'true');
         tab.setAttribute('data-doc-idx', docIdx);
-        tab.title = '双击重命名，拖拽排序';
+        if (EDITABLE) {
+          tab.setAttribute('draggable', 'true');
+          tab.title = '双击重命名，拖拽排序';
+        } else {
+          tab.style.cursor = 'pointer';
+        }
         var label = document.createElement('span');
         label.className = 'tab-label';
         label.textContent = docs[docIdx].name || ('文档 ' + (docIdx + 1));
         tab.appendChild(label);
         tab.addEventListener('click', function() { switchTo(docIdx); });
-        tab.addEventListener('dblclick', function() { startRename(tab, docIdx); });
-        tab.addEventListener('dragstart', function(e) {
-          dragFromPos = docOrder.indexOf(docIdx);
-          tab.classList.add('dragging');
-          e.dataTransfer.effectAllowed = 'move';
-        });
-        tab.addEventListener('dragend', function() { tab.classList.remove('dragging'); dragFromPos = null; });
-        tab.addEventListener('dragover', function(e) { e.preventDefault(); });
-        tab.addEventListener('drop', function(e) {
-          e.preventDefault();
-          var from = dragFromPos;
-          var to = docOrder.indexOf(docIdx);
-          if (from == null || from === to) return;
-          var moved = docOrder.splice(from, 1)[0];
-          docOrder.splice(to, 0, moved);
-          dragFromPos = null;
-          renderTabs();
-          buildToc();
-        });
+        if (EDITABLE) {
+          tab.addEventListener('dblclick', function() { startRename(tab, docIdx); });
+          tab.addEventListener('dragstart', function(e) {
+            dragFromPos = docOrder.indexOf(docIdx);
+            tab.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+          });
+          tab.addEventListener('dragend', function() { tab.classList.remove('dragging'); dragFromPos = null; });
+          tab.addEventListener('dragover', function(e) { e.preventDefault(); });
+          tab.addEventListener('drop', function(e) {
+            e.preventDefault();
+            var from = dragFromPos;
+            var to = docOrder.indexOf(docIdx);
+            if (from == null || from === to) return;
+            var moved = docOrder.splice(from, 1)[0];
+            docOrder.splice(to, 0, moved);
+            dragFromPos = null;
+            renderTabs();
+            buildToc();
+          });
+        }
         tabsEl.appendChild(tab);
       });
     }

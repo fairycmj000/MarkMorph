@@ -1054,6 +1054,8 @@
     if (!task || !previewPanel.classList.contains('open')) return;
     try {
       if (task.type === 'merge') {
+        // 记录预览中当前的标签顺序与重命名，外部同步刷新后保持不丢
+        const tabState = readMergedTabState();
         const files = [];
         for (const item of task.files) {
           const res = await window.api.readMdFile(item.srcPath);
@@ -1064,9 +1066,17 @@
             srcPath: item.srcPath
           });
         }
-        const html = await window.api.previewMerge(files);
+        let finalFiles = files;
+        if (tabState && tabState.order.length === files.length) {
+          finalFiles = tabState.order.map(idx => ({
+            name: (tabState.names[idx] || files[idx].name || ''),
+            content: files[idx].content,
+            srcPath: files[idx].srcPath
+          }));
+        }
+        const html = await window.api.previewMerge(finalFiles);
         previewFrame.srcdoc = html;
-        task.files = files;
+        task.files = finalFiles;
       } else {
         const res = await window.api.readMdFile(task.srcPath);
         if (!res || res.error || res.content == null) return;
@@ -1095,6 +1105,36 @@
     fitContainer();
     unwatchAll();
   });
+
+  // 读取合并预览 iframe 当前的标签顺序与重命名后的名称（失败返回 null）
+  function readMergedTabState() {
+    try {
+      const doc = previewFrame.contentDocument;
+      if (!doc) return null;
+      const tabs = Array.from(doc.querySelectorAll('#tabs .tab'));
+      if (tabs.length === 0) return null;
+      const order = tabs.map(tab => Number(tab.getAttribute('data-doc-idx')));
+      const names = {};
+      tabs.forEach(tab => {
+        const label = tab.querySelector('.tab-label');
+        const idx = Number(tab.getAttribute('data-doc-idx'));
+        if (label) names[idx] = label.textContent.trim();
+      });
+      return { order, names };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // 按预览中的最新标签顺序/名称重排 files，供下载使用
+  function collectMergedFiles(files) {
+    const st = readMergedTabState();
+    if (!st || st.order.length !== files.length) return files;
+    return st.order.map(idx => {
+      const f = files[idx] || {};
+      return { name: st.names[idx] || f.name || '', content: f.content, srcPath: f.srcPath };
+    });
+  }
 
   // 下载按钮 → 根据任务类型下载 PDF 或 HTML
   downloadBtn.addEventListener('click', async () => {
@@ -1151,7 +1191,9 @@
       setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 HTML...');
 
       try {
-        const result = await window.api.convertMerge(task.files, '合并文档');
+        // 若用户在预览里拖拽调整了标签顺序或双击重命名，下载时按最新名称与顺序生成
+        const files = collectMergedFiles(task.files);
+        const result = await window.api.convertMerge(files, '合并文档');
         if (result.success) {
           setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
           downloadBtn.textContent = '下载完成 ✓';

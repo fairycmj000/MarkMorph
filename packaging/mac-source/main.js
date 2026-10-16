@@ -278,7 +278,7 @@ ipcMain.handle('preview-md', async (_, { mdContent, srcPath }) => {
 
 // 预览：多个 markdown 合并为一个 HTML（顶部标签页 + 汇总目录）
 ipcMain.handle('preview-merge', async (_, { files }) => {
-  return buildMergedHtml(files || []);
+  return buildMergedHtml(files || [], undefined, true);
 });
 
 // 转换：渲染 HTML → printToPDF → 添加书签 → 保存文件
@@ -585,7 +585,7 @@ ipcMain.handle('convert-html', async (event, { mdContent, filename, srcPath }) =
 
 // 导出：多个 markdown 合并后的 HTML（内联 mermaid SVG，离线可用）
 ipcMain.handle('convert-merge', async (event, { files, filename }) => {
-  const html = buildMergedHtml(files || []);
+  const html = buildMergedHtml(files || [], undefined, false);
 
   const hidden = new BrowserWindow({
     show: false,
