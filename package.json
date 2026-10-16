@@ -25,6 +25,14 @@
   "build": {
     "appId": "com.internal.md2pdf",
     "productName": "MarkMorph",
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "MarkMorph",
+        "description": "Markdown 文档",
+        "icon": "build/icon.ico"
+      }
+    ],
     "files": [
       "main.js",
       "preload.js",
