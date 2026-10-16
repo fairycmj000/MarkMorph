@@ -287,6 +287,8 @@
   .grid-row { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .row-divider { flex: 0 0 8px; cursor: row-resize; border-radius: 4px; background: transparent; transition: background 0.15s; }
   .row-divider:hover, .row-divider.dragging { background: rgba(192,128,48,0.45); }
+  .col-divider { flex: 0 0 6px; align-self: stretch; cursor: col-resize; border-radius: 4px; background: transparent; transition: background 0.15s; }
+  .col-divider:hover, .col-divider.dragging { background: rgba(192,128,48,0.45); }
   .pane {
     flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
     border: 2px solid rgba(180,130,60,0.15); border-radius: 6px;
@@ -804,30 +806,19 @@
     </div>
     <div class="help-body">
       <h2>最新更新</h2>
-      <h3>v1.0.16</h3>
       <ul>
-        <li><b>缩放按钮移到「编辑」同行</b>：缩放 / 重置按钮与「编辑」按钮同一行，中间显示当前比例（50%–300%，步进 10%）</li>
+        <li><b>双击 .md 文件直接打开</b>：完成文件关联后，双击 .md（或右键 → 打开方式 → MarkMorph）自动启动并直接以 HTML 全屏预览；已运行时再次双击会加载到当前窗口</li>
+        <li><b>缩放按钮移到「编辑」同行</b>：缩放 / 重置按钮与「编辑」同一行，中间显示当前比例（50%–300%，步进 10%）；仅缩放正文区，左侧导航栏不变</li>
         <li><b>编辑支持「取消」</b>：编辑后可点「取消」放弃本次修改、不提交；分屏编辑同样支持独立取消</li>
-        <li><b>多文件布局切换</b>：新增「布局」按钮，在一行 8 格 ↔ 上下两行各 4 格间切换；两行布局下可<b>上下拖动分隔线</b>调整高度</li>
-        <li><b>图片 / 流程图单独下载</b>：全屏放大查看时点底部「下载」按钮，单独下载当前图片（原格式）或流程图（.svg）</li>
-      </ul>
-      <h3>v1.0.15</h3>
-      <h4>新功能</h4>
-      <ul>
+        <li><b>多文件布局切换 + 拖动分隔线</b>：一行 8 格 ↔ 上下两行各 4 格；一行布局可<b>左右拖动分隔线</b>调整分屏宽度，两行布局可<b>上下拖动分隔线</b>调整高度</li>
+        <li><b>图片 / 流程图放大查看与单独下载</b>：点击图片 / 流程图全屏放大，滚轮缩放、拖动平移；点底部「下载」单独下载（图片原格式 / 流程图 .svg）</li>
         <li><b>多文件分屏预览 + 合并下载</b>：多个 Markdown 并列分屏预览，可编辑保存；合并下载支持 HTML / PDF / Word</li>
         <li><b>预览内编辑并保存</b>：单文件与多文件分屏均可在预览内编辑并保存回源 .md 文件</li>
         <li><b>外部编辑冲突提示</b>：预览期间源文件被其他程序修改时弹出提示，未保存的本地编辑不提交、自动回退只读</li>
         <li><b>明亮 / 黑暗主题 + 全屏</b>：预览面板支持 🌙/☀️ 主题切换与全屏模式（全屏隐藏上传入口）</li>
-      </ul>
-      <h4>功能增强</h4>
-      <ul>
         <li>首页四个入口改为 <b>2×2 自适应布局</b>，随窗口大小自动缩放</li>
         <li>HTML 查看 <b>导航栏优化</b>：折叠 / 展开、拖动调整宽度、目录自动高亮跟随</li>
-        <li>新增 <b>仅内容区域缩放</b>（50%–300%），左侧导航栏保持不变</li>
-        <li>图片 / 流程图支持 <b>单独放大查看</b>（滚轮缩放、拖动平移）</li>
       </ul>
-      <h4>BUG 修复</h4>
-      <p>本版本无 BUG 修复。</p>
 
       <h2>一、快速上手</h2>
       <p>窗口内有四个入口，默认按 <b>2×2</b> 排列：</p>
@@ -853,7 +844,7 @@
       <ul>
         <li>把多个 <code>.md</code> 文件拖入「多文件」入口（最多 8 个），自动进入<b>全屏分屏预览</b></li>
         <li>每个分屏都可<b>编辑并保存 / 取消</b>回源文件；<b>拖动分屏标题</b>调整顺序，点分屏右上角 ✕ 关闭</li>
-        <li>点顶部「布局」按钮，在<b>一行 8 格</b>与<b>上下两行各 4 格</b>间切换；两行布局下可<b>上下拖动分隔线</b>调整高度</li>
+        <li>点顶部布局切换按钮（▬/▦），在<b>一行 8 格</b>与<b>上下两行各 4 格</b>间切换；一行布局可<b>左右拖动分隔线</b>调整分屏宽度，两行布局可<b>上下拖动分隔线</b>调整高度</li>
         <li>点右上角「合并下载」：<b>勾选</b>要合并的文件、<b>拖动排序</b>、<b>双击文件名重命名</b>，再选择格式（HTML / PDF / Word）</li>
         <li>预览中可点「+ 添加文件」继续追加 .md 文件（不超过 8 个）</li>
       </ul>
@@ -1003,7 +994,7 @@
       <button class="btn-download" id="downloadBtn">下载 PDF</button>
       <button class="btn-tool" id="addFileBtn" title="添加文件（最多 8 个）">+ 添加文件</button>
       <button class="btn-download" id="mergeDownloadBtn" title="合并下载">合并下载</button>
-      <button class="btn-tool" id="gridLayoutBtn" title="切换分屏布局" hidden>布局：1×8</button>
+      <button class="btn-tool" id="gridLayoutBtn" title="切换分屏布局" hidden>▬</button>
       <button class="btn-icon" id="fullscreenBtn" title="全屏（隐藏上传入口）">⛶</button>
       <button class="btn-icon" id="themeBtn" title="切换明亮/黑暗风格">🌙</button>
       <button class="btn-close" id="closeBtn">×</button>
@@ -1663,7 +1654,7 @@
   let gridTwoRows = false;   // 多文件分屏：false = 1行×8格；true = 2行×4格
 
   function updateGridLayoutBtn() {
-    gridLayoutBtn.textContent = gridTwoRows ? '布局：2×4' : '布局：1×8';
+    gridLayoutBtn.textContent = gridTwoRows ? '▦' : '▬';
     gridLayoutBtn.title = gridTwoRows ? '当前 2行×4格（点击切换为 1行×8格）' : '当前 1行×8格（点击切换为 2行×4格）';
   }
 
@@ -1715,11 +1706,10 @@
     previewGrid.innerHTML = '';
     previewGrid.classList.toggle('two-rows', gridTwoRows);
 
-    let topRow = null, bottomRow = null;
     if (gridTwoRows) {
-      topRow = document.createElement('div');
+      const topRow = document.createElement('div');
       topRow.className = 'grid-row top';
-      bottomRow = document.createElement('div');
+      const bottomRow = document.createElement('div');
       bottomRow.className = 'grid-row bottom';
       const divider = document.createElement('div');
       divider.className = 'row-divider';
@@ -1727,17 +1717,14 @@
       divider.title = '拖动调整上下两行高度';
       previewGrid.append(topRow, divider, bottomRow);
       attachRowDivider(divider, topRow, bottomRow);
-    }
 
-    const half = gridTwoRows ? Math.ceil(files.length / 2) : files.length;
-    files.forEach((f, i) => {
-      const pane = createPane(f);
-      if (gridTwoRows) {
-        (i < half ? topRow : bottomRow).appendChild(pane);
-      } else {
-        previewGrid.appendChild(pane);
-      }
-    });
+      const half = Math.ceil(files.length / 2);
+      files.forEach((f, i) => {
+        (i < half ? topRow : bottomRow).appendChild(createPane(f));
+      });
+    } else {
+      previewGrid.appendChild(buildColRow(files.map(f => createPane(f))));
+    }
   }
 
   function createPane(f) {
@@ -1833,6 +1820,61 @@
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
       document.body.style.cursor = 'row-resize';
+    });
+  }
+
+  // 1行×8格：在相邻 pane 之间插入纵向分隔线（可拖动调整分屏宽度）
+  function buildColRow(ordered) {
+    const frag = document.createDocumentFragment();
+    ordered.forEach((p, i) => {
+      if (i > 0) {
+        const divider = document.createElement('div');
+        divider.className = 'col-divider';
+        divider.title = '拖动调整分屏宽度';
+        attachColDivider(divider, ordered[i - 1], p);
+        frag.appendChild(divider);
+      }
+      frag.appendChild(p);
+    });
+    return frag;
+  }
+
+  // 让所有分屏以当前像素宽度作为 flex-grow，便于后续按比例换算
+  function normalizeColWidths() {
+    previewGrid.querySelectorAll('.pane').forEach(p => {
+      p.style.flexGrow = p.getBoundingClientRect().width;
+    });
+  }
+
+  // 拖动纵向分隔线：调整左右两个分屏的宽度
+  function attachColDivider(divider, leftPane, rightPane) {
+    divider.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      divider.classList.add('dragging');
+      normalizeColWidths();
+      const startX = e.clientX;
+      const leftW = leftPane.getBoundingClientRect().width;
+      const rightW = rightPane.getBoundingClientRect().width;
+      const minW = 80;
+      function onMove(ev) {
+        const dx = ev.clientX - startX;
+        let nl = leftW + dx;
+        let nr = rightW - dx;
+        if (nl < minW) { nl = minW; nr = leftW + rightW - nl; }
+        if (nr < minW) { nr = minW; nl = leftW + rightW - nl; }
+        leftPane.style.flexGrow = nl;
+        rightPane.style.flexGrow = nr;
+      }
+      function onUp() {
+        divider.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.cursor = '';
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.body.style.cursor = 'col-resize';
     });
   }
 
@@ -1968,7 +2010,7 @@
       top.replaceChildren(...ordered.slice(0, half));
       bottom.replaceChildren(...ordered.slice(half));
     } else {
-      previewGrid.replaceChildren(...ordered);
+      previewGrid.replaceChildren(buildColRow(ordered));
     }
   }
 
