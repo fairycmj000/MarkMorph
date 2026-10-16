@@ -863,6 +863,40 @@
 
   // ====== 水印 ======
   document.getElementById('watermark').textContent = 'MarkMorph by cmj @20260809';
+
+  // ====== 文件关联自动打开：双击 .md → 直接进入「转 HTML」预览 ======
+  const statusHtml = document.getElementById('statusHtml');
+
+  async function openFileByPath(filePath) {
+    if (!filePath) return;
+    const result = await window.api.readMdFile(filePath);
+    if (!result || result.error || !result.content) {
+      setStatus(statusHtml, 'error', '无法读取文件：' + (result && result.error ? result.error : filePath));
+      return;
+    }
+    setStatus(statusHtml, 'loading', '<div class="spinner"></div> 加载预览...');
+    try {
+      const html = await window.api.previewMd(result.content, result.srcPath);
+      previewFrame.srcdoc = html;
+      previewFilename.textContent = result.filename;
+      downloadBtn.textContent = '下载 HTML';
+      previewPanel.classList.add('open');
+      document.body.classList.add('has-preview');
+      setStatus(statusHtml, 'success', '预览已就绪，点击「下载 HTML」保存到指定目录');
+      previewPanel._pendingTask = { type: 'html', content: result.content, filename: result.filename, srcPath: result.srcPath, statusEl: statusHtml };
+    } catch (err) {
+      setStatus(statusHtml, 'error', err.message);
+    }
+  }
+
+  // 已运行实例收到第二次双击的文件
+  if (window.api && typeof window.api.onOpenFile === 'function') {
+    window.api.onOpenFile((filePath) => openFileByPath(filePath));
+  }
+
+  // 首次启动：从 query 参数读取待打开文件路径
+  const openQuery = new URLSearchParams(location.search).get('open');
+  if (openQuery) openFileByPath(openQuery);
 </script>
 </body>
 </html>

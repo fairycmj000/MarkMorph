@@ -16,5 +16,7 @@ contextBridge.exposeInMainWorld('api', {
   resizeLayout: (mode) => ipcRenderer.invoke('resize-layout', mode),
   selectBackground: () => ipcRenderer.invoke('select-background'),
   getBackground: () => ipcRenderer.invoke('get-background'),
-  resetBackground: () => ipcRenderer.invoke('reset-background')
+  resetBackground: () => ipcRenderer.invoke('reset-background'),
+  readMdFile: (filePath) => ipcRenderer.invoke('read-md-file', filePath),
+  onOpenFile: (cb) => ipcRenderer.on('open-file', (_event, filePath) => cb(filePath))
 });
