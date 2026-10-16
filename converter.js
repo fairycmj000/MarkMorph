@@ -229,9 +229,24 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   }
   #toc { list-style: none; padding: 0; margin: 0; }
   #toc li { margin: 0; }
+  .toc-row { display: flex; align-items: center; }
+  .toc-toggle {
+    flex: 0 0 18px;
+    text-align: center;
+    cursor: pointer;
+    color: #8b949e;
+    font-size: 11px;
+    line-height: 1;
+    user-select: none;
+  }
+  .toc-toggle:hover { color: #0366d6; }
+  .toc-toggle.leaf { visibility: hidden; cursor: default; }
+  .toc-children { list-style: none; padding: 0 0 0 16px; margin: 0; }
+  .toc-item.collapsed > .toc-children { display: none; }
   #toc a {
+    flex: 1;
     display: block;
-    padding: 5px 20px;
+    padding: 5px 10px 5px 4px;
     color: #586069;
     text-decoration: none;
     font-size: 12.5px;
@@ -246,10 +261,11 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
     background: #e6f0ff;
     border-left-color: #0366d6;
   }
-  #toc .lvl-1 { font-weight: 700; color: #1a1a1a; padding-left: 16px; font-size: 13px; }
-  #toc .lvl-2 { font-weight: 600; color: #24292e; padding-left: 20px; }
-  #toc .lvl-3 { padding-left: 34px; font-size: 12px; }
-  #toc .lvl-4 { padding-left: 48px; font-size: 11.5px; color: #6a737d; }
+  #toc .lvl-1 { font-weight: 700; color: #1a1a1a; font-size: 13px; }
+  #toc .lvl-2 { font-weight: 600; color: #24292e; }
+  #toc .lvl-3 { font-size: 12px; }
+  #toc .lvl-4 { font-size: 11.5px; color: #6a737d; }
+  #toc .lvl-5 { font-size: 11px; color: #8a939c; }
 
   /* 主内容区 */
   #main {
@@ -275,6 +291,7 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   h2 { font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 32px; }
   h3 { font-size: 15px; margin-top: 24px; }
   h4 { font-size: 13px; margin-top: 16px; }
+  h5 { font-size: 12px; margin-top: 14px; }
   p { margin: 8px 0; }
   ul, ol { padding-left: 24px; }
   li { margin: 3px 0; }
@@ -299,6 +316,41 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   }
   th { background: #f0f0f0; font-weight: bold; }
   tr:nth-child(even) td { background: #fafafa; }
+  /* 表格字段筛选栏 */
+  .table-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 4px 0 8px;
+    padding: 8px 10px;
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .table-filter-bar .filter-field { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .table-filter-bar .filter-field label { color: #586069; }
+  .table-filter-bar select {
+    max-width: 180px;
+    padding: 3px 6px;
+    font-size: 12px;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+    background: #fff;
+    color: #24292e;
+  }
+  .table-filter-bar .filter-count { color: #6a737d; margin-left: auto; }
+  .table-filter-bar button {
+    padding: 3px 10px;
+    font-size: 12px;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+    background: #fff;
+    color: #24292e;
+    cursor: pointer;
+  }
+  .table-filter-bar button:hover { background: #e6f0ff; border-color: #0366d6; color: #0366d6; }
   code {
     background: #f4f4f4;
     padding: 1px 4px;
@@ -362,6 +414,12 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   /* 导航栏折叠 / 展开 */
   #sidebar-header-top { display: flex; align-items: center; justify-content: space-between; }
   #sidebar-header-top h2 { margin-bottom: 0; }
+  .toc-actions { display: flex; align-items: center; gap: 2px; }
+  .toc-actions button {
+    border: none; background: transparent; color: #6a737d; cursor: pointer;
+    font-size: 11px; line-height: 1; padding: 4px 6px; border-radius: 4px;
+  }
+  .toc-actions button:hover { background: #e6e9ec; color: #0366d6; }
   #collapse-btn {
     border: none;
     background: transparent;
@@ -517,7 +575,11 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   <div id="sidebar-header">
     <div id="sidebar-header-top">
       <h2>目录</h2>
-      <button id="collapse-btn" title="收起导航栏" aria-label="收起导航栏">«</button>
+      <div class="toc-actions">
+        <button id="toc-expand-all" title="全部展开" aria-label="全部展开">展开</button>
+        <button id="toc-collapse-all" title="全部收起" aria-label="全部收起">收起</button>
+        <button id="collapse-btn" title="收起导航栏" aria-label="收起导航栏">«</button>
+      </div>
     </div>
     <div id="progress-text">阅读进度 0%</div>
   </div>
@@ -556,27 +618,106 @@ ${bodyHtml}
   (function() {
     var toc = document.getElementById('toc');
     var tocWrapper = document.getElementById('toc-wrapper');
-    var headings = Array.from(document.querySelectorAll('#main h1, #main h2, #main h3, #main h4'));
+    var headings = Array.from(document.querySelectorAll('#main h1, #main h2, #main h3, #main h4, #main h5'));
     var tocItems = [];
 
     headings.forEach(function(h, i) {
-      var level = parseInt(h.tagName.substring(1));
       if (!h.id) h.id = 'heading-' + i;
-      var li = document.createElement('li');
-      var a = document.createElement('a');
-      a.href = '#' + h.id;
-      a.className = 'lvl-' + level;
-      a.textContent = h.textContent;
-      a.dataset.target = h.id;
-      a.addEventListener('click', function(e) {
-        e.preventDefault();
-        h.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        setTimeout(updateActive, 50);
-      });
-      li.appendChild(a);
-      toc.appendChild(li);
-      tocItems.push({ heading: h, link: a });
     });
+
+    // 按标题层级构建目录树（虚拟根 level=0），支持逐级折叠/展开
+    function buildTocTree() {
+      var stack = [{ level: 0, children: [] }];
+      headings.forEach(function(h) {
+        var level = parseInt(h.tagName.substring(1));
+        var node = { level: level, heading: h, children: [], parent: null, li: null, toggle: null };
+        while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
+        node.parent = stack[stack.length - 1];
+        stack[stack.length - 1].children.push(node);
+        stack.push(node);
+      });
+      return stack[0];
+    }
+
+    // 展开某节点到根，保证当前激活项始终可见
+    function expandTo(node) {
+      var n = node;
+      while (n) {
+        if (n.li && n.li.classList.contains('collapsed')) {
+          n.li.classList.remove('collapsed');
+          if (n.toggle) n.toggle.textContent = '▾';
+        }
+        n = n.parent;
+      }
+    }
+
+    function renderToc(nodes, parentUl) {
+      nodes.forEach(function(node) {
+        var li = document.createElement('li');
+        li.className = 'toc-item';
+        node.li = li;
+
+        var row = document.createElement('div');
+        row.className = 'toc-row';
+
+        var toggle = document.createElement('span');
+        toggle.className = 'toc-toggle' + (node.children.length ? '' : ' leaf');
+        toggle.textContent = node.children.length ? '▾' : '';
+        node.toggle = toggle;
+        if (node.children.length) {
+          toggle.addEventListener('click', function() {
+            var collapsed = li.classList.toggle('collapsed');
+            toggle.textContent = collapsed ? '▸' : '▾';
+          });
+        }
+
+        var a = document.createElement('a');
+        a.href = '#' + node.heading.id;
+        a.className = 'lvl-' + node.level;
+        a.textContent = node.heading.textContent;
+        a.dataset.target = node.heading.id;
+        a.addEventListener('click', function(e) {
+          e.preventDefault();
+          node.heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(updateActive, 50);
+        });
+
+        row.appendChild(toggle);
+        row.appendChild(a);
+        li.appendChild(row);
+
+        if (node.children.length) {
+          var ul = document.createElement('ul');
+          ul.className = 'toc-children';
+          renderToc(node.children, ul);
+          li.appendChild(ul);
+        }
+
+        parentUl.appendChild(li);
+        tocItems.push({ heading: node.heading, link: a, node: node });
+      });
+    }
+
+    renderToc(buildTocTree().children, toc);
+
+    // 全部展开 / 全部收起
+    var tocExpandAll = document.getElementById('toc-expand-all');
+    var tocCollapseAll = document.getElementById('toc-collapse-all');
+    function setAllToc(collapsed) {
+      tocItems.forEach(function(item) {
+        var node = item.node;
+        if (!node.children.length) return;   // 叶子节点无需展开/收起
+        if (collapsed) {
+          node.li.classList.add('collapsed');
+          node.toggle.textContent = '▸';
+        } else {
+          node.li.classList.remove('collapsed');
+          node.toggle.textContent = '▾';
+        }
+      });
+    }
+    tocExpandAll.addEventListener('click', function() { setAllToc(false); });
+    tocCollapseAll.addEventListener('click', function() { setAllToc(true); });
 
     var progressBar = document.getElementById('progress-bar');
     var progressText = document.getElementById('progress-text');
@@ -609,6 +750,7 @@ ${bodyHtml}
         item.link.classList.toggle('active', isActive);
         if (isActive) activeLink = item.link;
       });
+      if (currentIdx >= 0 && tocItems[currentIdx]) expandTo(tocItems[currentIdx].node);
 
       if (activeLink) {
         var wrapperRect = tocWrapper.getBoundingClientRect();
@@ -896,6 +1038,104 @@ ${bodyHtml}
     });
   })();
 </script>
+<script>
+  // ===== 表格字段筛选：对 data-filterable 表格按字段下拉筛选 =====
+  (function() {
+    function initFilters() {
+      document.querySelectorAll('table[data-filterable]').forEach(function(table) {
+        if (table._mmFilterInit) return;
+        table._mmFilterInit = true;
+        var meta;
+        try { meta = JSON.parse(table.getAttribute('data-filter-meta')); } catch (e) { return; }
+        if (!meta || !meta.cols || !meta.cols.length) return;
+        var cols = meta.cols;
+        var labels = (meta.labels && meta.labels.length === cols.length) ? meta.labels : cols.map(function(c) { return '列' + (c + 1); });
+
+        // 数据行 = 带首个筛选列 data-f 属性的 <tr>（表头/前置标题行不参与筛选）
+        var firstKey = 'data-f' + cols[0];
+        var dataRows = Array.prototype.filter.call(table.rows, function(tr) { return tr.hasAttribute(firstKey); });
+
+        var optionSets = cols.map(function() { return {}; });
+        dataRows.forEach(function(tr) {
+          cols.forEach(function(col, i) {
+            var v = (tr.getAttribute('data-f' + col) || '').trim();
+            if (v) optionSets[i][v] = true;
+          });
+        });
+
+        var bar = document.createElement('div');
+        bar.className = 'table-filter-bar';
+
+        var selects = [];
+        cols.forEach(function(col, i) {
+          var field = document.createElement('span');
+          field.className = 'filter-field';
+          var lab = document.createElement('label');
+          lab.textContent = labels[i] + '：';
+          var sel = document.createElement('select');
+          var allOpt = document.createElement('option');
+          allOpt.value = '';
+          allOpt.textContent = '全部';
+          sel.appendChild(allOpt);
+          var vals = Object.keys(optionSets[i]);
+          vals.sort(function(a, b) {
+            var na = Number(a), nb = Number(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return String(a).localeCompare(String(b), 'zh-CN');
+          });
+          vals.forEach(function(v) {
+            var opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            sel.appendChild(opt);
+          });
+          field.appendChild(lab);
+          field.appendChild(sel);
+          bar.appendChild(field);
+          selects.push(sel);
+        });
+
+        var countEl = document.createElement('span');
+        countEl.className = 'filter-count';
+        countEl.textContent = '共 ' + dataRows.length + ' 条';
+
+        var resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.textContent = '重置';
+
+        bar.appendChild(resetBtn);
+        bar.appendChild(countEl);
+
+        function apply() {
+          var active = {};
+          selects.forEach(function(sel, i) { if (sel.value !== '') active[cols[i]] = sel.value; });
+          var shown = 0;
+          dataRows.forEach(function(tr) {
+            var match = true;
+            for (var k in active) {
+              if ((tr.getAttribute('data-f' + k) || '').trim() !== active[k]) { match = false; break; }
+            }
+            tr.style.display = match ? '' : 'none';
+            if (match) shown++;
+          });
+          countEl.textContent = '共 ' + shown + ' 条';
+        }
+        selects.forEach(function(sel) { sel.addEventListener('change', apply); });
+        resetBtn.addEventListener('click', function() {
+          selects.forEach(function(sel) { sel.value = ''; });
+          apply();
+        });
+
+        table.parentNode.insertBefore(bar, table);
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFilters);
+    } else {
+      initFilters();
+    }
+  })();
+</script>
 <script src="${MERMAID_SRC}"></script>
 <script>
   try {
@@ -1068,6 +1308,7 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   #toc .toc-sub .lvl-2 { padding-left: 26px; }
   #toc .toc-sub .lvl-3 { padding-left: 40px; font-size: 11.5px; }
   #toc .toc-sub .lvl-4 { padding-left: 54px; font-size: 11px; color: #6a737d; }
+  #toc .toc-sub .lvl-5 { padding-left: 68px; font-size: 10.5px; color: #8a939c; }
 
   /* 主内容区 */
   #main {
@@ -1103,6 +1344,7 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   h2 { font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 32px; }
   h3 { font-size: 15px; margin-top: 24px; }
   h4 { font-size: 13px; margin-top: 16px; }
+  h5 { font-size: 12px; margin-top: 14px; }
   p { margin: 8px 0; }
   ul, ol { padding-left: 24px; }
   li { margin: 3px 0; }
@@ -1127,6 +1369,41 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   }
   th { background: #f0f0f0; font-weight: bold; }
   tr:nth-child(even) td { background: #fafafa; }
+  /* 表格字段筛选栏 */
+  .table-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 4px 0 8px;
+    padding: 8px 10px;
+    background: #f6f8fa;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  .table-filter-bar .filter-field { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .table-filter-bar .filter-field label { color: #586069; }
+  .table-filter-bar select {
+    max-width: 180px;
+    padding: 3px 6px;
+    font-size: 12px;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+    background: #fff;
+    color: #24292e;
+  }
+  .table-filter-bar .filter-count { color: #6a737d; margin-left: auto; }
+  .table-filter-bar button {
+    padding: 3px 10px;
+    font-size: 12px;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+    background: #fff;
+    color: #24292e;
+    cursor: pointer;
+  }
+  .table-filter-bar button:hover { background: #e6f0ff; border-color: #0366d6; color: #0366d6; }
   code {
     background: #f4f4f4;
     padding: 1px 4px;
@@ -1431,7 +1708,7 @@ ${sectionsHtml}
 
         var sub = document.createElement('ul');
         sub.className = 'toc-sub';
-        var headings = sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4');
+        var headings = sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4, .doc-body h5');
         headings.forEach(function(h, i) {
           if (!h.id) h.id = 'doc-' + docIdx + '-h-' + i;
           var level = parseInt(h.tagName.substring(1), 10);
@@ -1457,7 +1734,7 @@ ${sectionsHtml}
 
     function currentHeadings() {
       var sec = sections[active];
-      return sec ? sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4') : [];
+      return sec ? sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4, .doc-body h5') : [];
     }
 
     function updateActiveToc() {
@@ -1741,6 +2018,104 @@ ${sectionsHtml}
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) lbClose();
     });
+  })();
+</script>
+<script>
+  // ===== 表格字段筛选：对 data-filterable 表格按字段下拉筛选 =====
+  (function() {
+    function initFilters() {
+      document.querySelectorAll('table[data-filterable]').forEach(function(table) {
+        if (table._mmFilterInit) return;
+        table._mmFilterInit = true;
+        var meta;
+        try { meta = JSON.parse(table.getAttribute('data-filter-meta')); } catch (e) { return; }
+        if (!meta || !meta.cols || !meta.cols.length) return;
+        var cols = meta.cols;
+        var labels = (meta.labels && meta.labels.length === cols.length) ? meta.labels : cols.map(function(c) { return '列' + (c + 1); });
+
+        // 数据行 = 带首个筛选列 data-f 属性的 <tr>（表头/前置标题行不参与筛选）
+        var firstKey = 'data-f' + cols[0];
+        var dataRows = Array.prototype.filter.call(table.rows, function(tr) { return tr.hasAttribute(firstKey); });
+
+        var optionSets = cols.map(function() { return {}; });
+        dataRows.forEach(function(tr) {
+          cols.forEach(function(col, i) {
+            var v = (tr.getAttribute('data-f' + col) || '').trim();
+            if (v) optionSets[i][v] = true;
+          });
+        });
+
+        var bar = document.createElement('div');
+        bar.className = 'table-filter-bar';
+
+        var selects = [];
+        cols.forEach(function(col, i) {
+          var field = document.createElement('span');
+          field.className = 'filter-field';
+          var lab = document.createElement('label');
+          lab.textContent = labels[i] + '：';
+          var sel = document.createElement('select');
+          var allOpt = document.createElement('option');
+          allOpt.value = '';
+          allOpt.textContent = '全部';
+          sel.appendChild(allOpt);
+          var vals = Object.keys(optionSets[i]);
+          vals.sort(function(a, b) {
+            var na = Number(a), nb = Number(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return String(a).localeCompare(String(b), 'zh-CN');
+          });
+          vals.forEach(function(v) {
+            var opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            sel.appendChild(opt);
+          });
+          field.appendChild(lab);
+          field.appendChild(sel);
+          bar.appendChild(field);
+          selects.push(sel);
+        });
+
+        var countEl = document.createElement('span');
+        countEl.className = 'filter-count';
+        countEl.textContent = '共 ' + dataRows.length + ' 条';
+
+        var resetBtn = document.createElement('button');
+        resetBtn.type = 'button';
+        resetBtn.textContent = '重置';
+
+        bar.appendChild(resetBtn);
+        bar.appendChild(countEl);
+
+        function apply() {
+          var active = {};
+          selects.forEach(function(sel, i) { if (sel.value !== '') active[cols[i]] = sel.value; });
+          var shown = 0;
+          dataRows.forEach(function(tr) {
+            var match = true;
+            for (var k in active) {
+              if ((tr.getAttribute('data-f' + k) || '').trim() !== active[k]) { match = false; break; }
+            }
+            tr.style.display = match ? '' : 'none';
+            if (match) shown++;
+          });
+          countEl.textContent = '共 ' + shown + ' 条';
+        }
+        selects.forEach(function(sel) { sel.addEventListener('change', apply); });
+        resetBtn.addEventListener('click', function() {
+          selects.forEach(function(sel) { sel.value = ''; });
+          apply();
+        });
+
+        table.parentNode.insertBefore(bar, table);
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initFilters);
+    } else {
+      initFilters();
+    }
   })();
 </script>
 <script src="${MERMAID_SRC}"></script>

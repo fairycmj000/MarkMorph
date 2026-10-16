@@ -1,6 +1,6 @@
 {
   "name": "md2pdf-electron",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "Markdown to PDF converter",
   "main": "main.js",
   "scripts": {
@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "docx": "^9.7.1",
+    "fast-xml-parser": "^4.5.3",
+    "jszip": "^3.10.1",
     "marked": "^18.0.2",
     "pdf-lib": "^1.17.1",
     "sharp": "^0.34.5"
@@ -37,6 +39,7 @@
       "main.js",
       "preload.js",
       "converter.js",
+      "docx2md.js",
       "renderer/**"
     ],
     "win": {

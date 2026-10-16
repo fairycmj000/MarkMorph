@@ -7,7 +7,7 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: "Georgia", "Microsoft YaHei", serif;
+    font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
     background: url('bg.webp') center/cover no-repeat fixed;
     height: 100vh;
     display: flex;
@@ -104,7 +104,7 @@
     pointer-events: none;
     z-index: 2;
   }
-  .card-html::after {
+  .card-docx-html::before {
     content: '⭐';
     position: absolute;
     bottom: -24px;
@@ -122,36 +122,6 @@
   @keyframes float-star {
     0%, 100% { transform: translateY(0) rotate(0deg); }
     50% { transform: translateY(-10px) rotate(-25deg); }
-  }
-  .card-word::before {
-    content: '📖';
-    position: absolute;
-    top: -12px;
-    left: -10px;
-    font-size: 30px;
-    opacity: 0.85;
-    animation: float-book 3.5s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 2;
-  }
-  @keyframes float-book {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-5px) rotate(5deg); }
-  }
-  .card-merge::before {
-    content: '🧩';
-    position: absolute;
-    bottom: -16px;
-    right: -16px;
-    font-size: 40px;
-    opacity: 0.85;
-    animation: float-merge 3.5s ease-in-out infinite;
-    pointer-events: none;
-    z-index: 2;
-  }
-  @keyframes float-merge {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-7px) rotate(-8deg); }
   }
   body.has-preview .card {
     width: 100%;
@@ -175,6 +145,8 @@
   .card-html .badge { background: linear-gradient(135deg, #fff0d0, #ffe4a0); color: #7a5a1a; border: 1px solid rgba(160,120,40,0.15); }
   .card-word .badge { background: linear-gradient(135deg, #d0e8ff, #b8d8ff); color: #2a608a; border: 1px solid rgba(40,100,180,0.15); }
   .card-merge .badge { background: linear-gradient(135deg, #e8d8ff, #d8c8ff); color: #5a3a8a; border: 1px solid rgba(120,80,180,0.15); }
+  .card-docx .badge { background: linear-gradient(135deg, #d0f0e0, #b8e8d0); color: #2a6a4a; border: 1px solid rgba(40,140,80,0.15); }
+  .card-docx-html .badge { background: linear-gradient(135deg, #d0f0f0, #b8e8e8); color: #1a6a6a; border: 1px solid rgba(40,160,160,0.15); }
 
   .drop-zone {
     border: none;
@@ -297,6 +269,20 @@
   }
   .pane:hover { border-color: #c08030; box-shadow: 0 0 0 2px rgba(192,128,48,0.3); }
   .pane.dragging { opacity: 0.5; }
+  /* 拖拽排序时禁用 iframe 鼠标事件，避免父窗口收不到 mousemove/mouseup */
+  .preview-grid.pane-dragging .pane-iframe,
+  .preview-grid.pane-dragging .pane-editor { pointer-events: none; }
+  /* 单个分屏放大查看（全屏 pane，收回即还原） */
+  .preview-grid.has-fs-pane { position: relative; }
+  .preview-grid.has-fs-pane .pane { display: none !important; }
+  .preview-grid.has-fs-pane .col-divider,
+  .preview-grid.has-fs-pane .row-divider { display: none !important; }
+  .preview-grid.has-fs-pane .pane.fs {
+    display: flex !important;
+    position: absolute;
+    inset: 8px;
+    z-index: 10;
+  }
   .pane-header {
     display: flex; align-items: center; gap: 6px; flex-shrink: 0;
     padding: 6px 10px; cursor: grab; user-select: none;
@@ -807,6 +793,8 @@
     <div class="help-body">
       <h2>最新更新</h2>
       <ul>
+        <li><b>新增 Word → MD 入口</b>：拖入或点选 .docx，无损转换为 Markdown（标题、表格、嵌入的 Excel 电子表格渲染为表格、图片提取到 assets 文件夹、超链接保留），预览确认后「下载 MD」落盘</li>
+        <li><b>新增 Word → HTML 入口</b>：拖入或点选 .docx，无损转换为 HTML（图片内联、单文件自包含），预览确认后「下载 HTML」保存并在浏览器打开</li>
         <li><b>双击 .md 文件直接打开</b>：完成文件关联后，双击 .md（或右键 → 打开方式 → MarkMorph）自动启动并直接以 HTML 全屏预览；已运行时再次双击会加载到当前窗口</li>
         <li><b>缩放按钮移到「编辑」同行</b>：缩放 / 重置按钮与「编辑」同一行，中间显示当前比例（50%–300%，步进 10%）；仅缩放正文区，左侧导航栏不变</li>
         <li><b>编辑支持「取消」</b>：编辑后可点「取消」放弃本次修改、不提交；分屏编辑同样支持独立取消</li>
@@ -821,14 +809,16 @@
       </ul>
 
       <h2>一、快速上手</h2>
-      <p>窗口内有四个入口，默认按 <b>2×2</b> 排列：</p>
+      <p>窗口内有六个入口，默认按 <b>2 列</b>排列（共三行）：</p>
       <ul>
         <li><b>MD → PDF</b>：先预览排版，再下载 PDF（自动生成书签目录）</li>
         <li><b>MD → HTML</b>：转换为网页并自动在浏览器中打开</li>
         <li><b>MD → Word</b>：转换为 <code>.docx</code>，可用 Word / WPS 继续编辑</li>
+        <li><b>Word → MD</b>：把 <code>.docx</code> 无损转换为 <code>.md</code>，图片提取到 <code>assets/</code> 子文件夹，嵌入的 Excel 电子表格渲染为表格，预览确认后下载</li>
+        <li><b>Word → HTML</b>：把 <code>.docx</code> 无损转换为 <code>.html</code>（图片内联、单文件自包含），预览确认后下载并在浏览器打开</li>
         <li><b>多文件</b>：多个 <code>.md</code> 分屏并列预览，可编辑保存，并合并下载为 HTML / PDF / Word</li>
       </ul>
-      <p>每个入口都支持两种选文件方式：把 <code>.md</code> 文件<b>拖入</b>对应区域，或<b>点击</b>该区域后在弹窗中选择文件。</p>
+      <p>每个入口都支持两种选文件方式：把文件<b>拖入</b>对应区域，或<b>点击</b>该区域后在弹窗中选择文件。</p>
 
       <h2>二、直接打开 .md 文件</h2>
       <p>安装并完成文件关联后，<b>双击 <code>.md</code> 文件</b>（或右键 → 打开方式 → MarkMorph）：</p>
@@ -972,6 +962,32 @@
       </div>
     </div>
     <div class="status hidden" id="statusMerge"></div>
+  </div>
+
+  <div class="card card-docx">
+    <div class="card-title">Word → MD <span class="badge">MD</span></div>
+    <div class="drop-zone" id="dropZoneDocx">
+      <input type="file" id="fileInputDocx" accept=".docx">
+      <div class="drop-icon">📥</div>
+      <div class="drop-text">
+        拖入或点击选择 .docx 文件
+        <span>无损转换为 Markdown 文档</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusDocx"></div>
+  </div>
+
+  <div class="card card-docx-html">
+    <div class="card-title">Word → HTML <span class="badge">HTML</span></div>
+    <div class="drop-zone" id="dropZoneDocxHtml">
+      <input type="file" id="fileInputDocxHtml" accept=".docx">
+      <div class="drop-icon">🌐</div>
+      <div class="drop-text">
+        拖入或点击选择 .docx 文件
+        <span>无损转换为 HTML 网页</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusDocxHtml"></div>
   </div>
 </div>
 
@@ -1154,6 +1170,70 @@
     }
   }
 
+  // Word → MD 入口：.docx 是二进制，预览阶段转 HTML 先核对无损结果，下载阶段再写 .md + assets/
+  async function handleDocx(file, statusEl) {
+    if (!file || !file.name.toLowerCase().endsWith('.docx')) {
+      setStatus(statusEl, 'error', '请选择 .docx 格式文件');
+      return;
+    }
+    setStatus(statusEl, 'loading', '<div class="spinner"></div> 解析 Word 文档...');
+    try {
+      const srcPath = safeGetFilePath(file);
+      const r = await window.api.convertDocxToMd(srcPath);
+      if (!r || r.error) {
+        setStatus(statusEl, 'error', (r && r.error) ? r.error : '转换失败');
+        return;
+      }
+      setPreviewMode('single');
+      editBtn.hidden = true;   // Word 源文件是二进制，预览阶段不可编辑
+      loadFrame(previewFrame, r.html);
+      previewFilename.textContent = (r.baseName || '文档') + '.md';
+      downloadBtn.textContent = '下载 MD';
+      previewPanel.classList.add('open');
+      document.body.classList.add('has-preview');
+      const s = r.stats || {};
+      setStatus(statusEl, 'success',
+        '预览就绪（标题 ' + (s.headings || 0) + ' · 表格 ' + (s.tables || 0) +
+        ' · 嵌入表格 ' + (s.embeddedSheets || 0) + ' · 图片 ' + (s.images || 0) +
+        ' · 链接 ' + (s.hyperlinks || 0) + '），点击「下载 MD」保存');
+      previewPanel._pendingTask = { type: 'docx', srcPath, statusEl };
+    } catch (err) {
+      setStatus(statusEl, 'error', err.message);
+    }
+  }
+
+  // Word → HTML 入口：预览与 Word → MD 共用同一份预览 HTML，下载阶段输出自包含 .html
+  async function handleDocxHtml(file, statusEl) {
+    if (!file || !file.name.toLowerCase().endsWith('.docx')) {
+      setStatus(statusEl, 'error', '请选择 .docx 格式文件');
+      return;
+    }
+    setStatus(statusEl, 'loading', '<div class="spinner"></div> 解析 Word 文档...');
+    try {
+      const srcPath = safeGetFilePath(file);
+      const r = await window.api.convertDocxToHtml(srcPath);
+      if (!r || r.error) {
+        setStatus(statusEl, 'error', (r && r.error) ? r.error : '转换失败');
+        return;
+      }
+      setPreviewMode('single');
+      editBtn.hidden = true;   // Word 源文件是二进制，预览阶段不可编辑
+      loadFrame(previewFrame, r.html);
+      previewFilename.textContent = (r.baseName || '文档') + '.html';
+      downloadBtn.textContent = '下载 HTML';
+      previewPanel.classList.add('open');
+      document.body.classList.add('has-preview');
+      const s = r.stats || {};
+      setStatus(statusEl, 'success',
+        '预览就绪（标题 ' + (s.headings || 0) + ' · 表格 ' + (s.tables || 0) +
+        ' · 嵌入表格 ' + (s.embeddedSheets || 0) + ' · 图片 ' + (s.images || 0) +
+        ' · 链接 ' + (s.hyperlinks || 0) + '），点击「下载 HTML」保存');
+      previewPanel._pendingTask = { type: 'docxHtml', srcPath, statusEl };
+    } catch (err) {
+      setStatus(statusEl, 'error', err.message);
+    }
+  }
+
   function readFile(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -1231,12 +1311,35 @@
     insertImageBtn.hidden = true;
     zoomPct = 100;
     zoomLevel.textContent = '100%';
-    gridTwoRows = false;
+    multiSingleRow = false;
     updateGridLayoutBtn();
+  }
+
+  // 拦截预览 iframe 内的外部链接点击：交给系统默认浏览器打开，避免 iframe 被导航走而无法返回
+  const __linkedIframes = new WeakSet();
+  function attachExternalLinkInterceptor(iframe) {
+    if (__linkedIframes.has(iframe)) return;
+    __linkedIframes.add(iframe);
+    iframe.addEventListener('load', () => {
+      try {
+        const doc = iframe.contentDocument;
+        if (!doc) return;
+        doc.addEventListener('click', (e) => {
+          const a = e.target && e.target.closest ? e.target.closest('a') : null;
+          if (!a) return;
+          const href = a.getAttribute('href') || '';
+          if (/^(https?|mailto):/i.test(href)) {
+            e.preventDefault();
+            window.api.openExternal(href);
+          }
+        });
+      } catch (err) {}
+    });
   }
 
   // 加载 iframe 内容并套用当前主题（iframe 异步加载，需在 load 后注入）
   function loadFrame(iframe, html) {
+    attachExternalLinkInterceptor(iframe);
     iframe.addEventListener('load', () => {
       applyContentTheme(iframe, dark);
       try { iframe.contentWindow.postMessage({ type: 'mm-zoom-set', pct: zoomPct }, '*'); } catch (e) {}
@@ -1293,7 +1396,7 @@
     cancelEditBtn.hidden = true;
     zoomPct = 100;
     zoomLevel.textContent = '100%';
-    gridTwoRows = false;
+    multiSingleRow = false;
     updateGridLayoutBtn();
     previewEditor.hidden = true;
     previewFrame.hidden = false;
@@ -1618,6 +1721,50 @@
         downloadBtn.disabled = false;
         downloadBtn.textContent = '下载 HTML';
       }
+    } else if (task.type === 'docx') {
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '生成中...';
+      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 MD...');
+
+      try {
+        const result = await window.api.saveDocxMd(task.srcPath);
+        if (result.success) {
+          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+          downloadBtn.textContent = '下载完成 ✓';
+          downloadBtn.disabled = false;
+          setTimeout(() => { downloadBtn.textContent = '下载 MD'; }, 3000);
+        } else {
+          setStatus(task.statusEl, 'error', '已取消');
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = '下载 MD';
+        }
+      } catch (err) {
+        setStatus(task.statusEl, 'error', err.message);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载 MD';
+      }
+    } else if (task.type === 'docxHtml') {
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '生成中...';
+      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 HTML...');
+
+      try {
+        const result = await window.api.saveDocxHtml(task.srcPath);
+        if (result.success) {
+          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+          downloadBtn.textContent = '下载完成 ✓';
+          downloadBtn.disabled = false;
+          setTimeout(() => { downloadBtn.textContent = '下载 HTML'; }, 3000);
+        } else {
+          setStatus(task.statusEl, 'error', '已取消');
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = '下载 HTML';
+        }
+      } catch (err) {
+        setStatus(task.statusEl, 'error', err.message);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载 HTML';
+      }
     }
   });
 
@@ -1639,6 +1786,18 @@
     document.getElementById('statusWord'),
     handleWord
   );
+  setupDropZone(
+    document.getElementById('dropZoneDocx'),
+    document.getElementById('fileInputDocx'),
+    document.getElementById('statusDocx'),
+    handleDocx
+  );
+  setupDropZone(
+    document.getElementById('dropZoneDocxHtml'),
+    document.getElementById('fileInputDocxHtml'),
+    document.getElementById('statusDocxHtml'),
+    handleDocxHtml
+  );
 
   // ====== 多文件（第 4 个上传入口）：分屏预览 + 合并下载 ======
   const statusMerge = document.getElementById('statusMerge');
@@ -1651,17 +1810,19 @@
   let mergeFiles = [];       // { name, content, srcPath, checked }（合并弹窗列表）
   let mergeDrag = null;      // { row, startY, moved }
   let paneDrag = null;       // { pane, startX, moved }
-  let gridTwoRows = false;   // 多文件分屏：false = 1行×8格；true = 2行×4格
+  let multiSingleRow = false;   // 多文件分屏：false = 自动铺满（≥4 个用 2 行）；true = 手动强制单行
 
   function updateGridLayoutBtn() {
-    gridLayoutBtn.textContent = gridTwoRows ? '▦' : '▬';
-    gridLayoutBtn.title = gridTwoRows ? '当前 2行×4格（点击切换为 1行×8格）' : '当前 1行×8格（点击切换为 2行×4格）';
+    const n = previewGrid.querySelectorAll('.pane').length;
+    gridLayoutBtn.hidden = (n < 4);   // <4 个固定单行等宽，无需切换
+    gridLayoutBtn.textContent = multiSingleRow ? '▬' : '▦';
+    gridLayoutBtn.title = multiSingleRow ? '当前 1行（点击切换为 2行铺满）' : '当前 2行铺满（点击切换为 1行）';
   }
 
   gridLayoutBtn.addEventListener('click', () => {
     const task = previewPanel._pendingTask;
     if (!task || task.type !== 'multi') return;
-    gridTwoRows = !gridTwoRows;
+    multiSingleRow = !multiSingleRow;
     updateGridLayoutBtn();
     renderMultiPreview(task.files);
   });
@@ -1701,16 +1862,28 @@
     updateWatch();
   }
 
-  // 渲染分屏 pane（每文件一个；支持 1行×8格 / 2行×4格）
+  // 多文件布局：1~3 个 → 单行等宽铺满；≥4 个 → 2 行铺满（4→2×2、5/6→2×3、7/8→2×4）；multiSingleRow 可强制单行
+  function computeMultiGrid(n) {
+    if (n < 4) return { rows: 1, cols: n };
+    if (multiSingleRow) return { rows: 1, cols: n };
+    return { rows: 2, cols: Math.ceil(n / 2) };
+  }
+
+  // 渲染分屏 pane（每文件一个）
   function renderMultiPreview(files) {
     previewGrid.innerHTML = '';
-    previewGrid.classList.toggle('two-rows', gridTwoRows);
+    previewGrid.classList.remove('has-fs-pane');
+    const n = files.length;
+    const g = computeMultiGrid(n);
+    previewGrid.classList.toggle('two-rows', g.rows === 2);
 
-    if (gridTwoRows) {
+    if (g.rows === 2) {
       const topRow = document.createElement('div');
       topRow.className = 'grid-row top';
+      topRow.style.gridTemplateColumns = 'repeat(' + g.cols + ', 1fr)';
       const bottomRow = document.createElement('div');
       bottomRow.className = 'grid-row bottom';
+      bottomRow.style.gridTemplateColumns = 'repeat(' + g.cols + ', 1fr)';
       const divider = document.createElement('div');
       divider.className = 'row-divider';
       divider.id = 'rowDivider';
@@ -1718,13 +1891,14 @@
       previewGrid.append(topRow, divider, bottomRow);
       attachRowDivider(divider, topRow, bottomRow);
 
-      const half = Math.ceil(files.length / 2);
+      const half = Math.ceil(n / 2);
       files.forEach((f, i) => {
         (i < half ? topRow : bottomRow).appendChild(createPane(f));
       });
     } else {
       previewGrid.appendChild(buildColRow(files.map(f => createPane(f))));
     }
+    updateGridLayoutBtn();
   }
 
   function createPane(f) {
@@ -1758,13 +1932,19 @@
     cancel.hidden = true;
     cancel.addEventListener('click', () => cancelPaneEdit(pane));
 
+    const fs = document.createElement('button');
+    fs.className = 'pane-btn pane-fs-btn';
+    fs.textContent = '全屏';
+    fs.title = '放大此分屏查看';
+    fs.addEventListener('click', () => togglePaneFullscreen(pane));
+
     const close = document.createElement('button');
     close.className = 'pane-btn pane-close';
     close.textContent = '×';
     close.title = '关闭此文件';
     close.addEventListener('click', () => closePane(pane));
 
-    header.append(name, edit, img, cancel, close);
+    header.append(name, edit, img, cancel, fs, close);
 
     const body = document.createElement('div');
     body.className = 'pane-body';
@@ -1791,6 +1971,25 @@
     attachPaneDrag(pane);
 
     return pane;
+  }
+
+  // 单个分屏放大查看 / 收回（放大时其它 pane 隐藏，iframe 内容不重载）
+  function togglePaneFullscreen(pane) {
+    const grid = previewGrid;
+    const isFs = grid.classList.contains('has-fs-pane') && pane.classList.contains('fs');
+    // 先退出当前全屏（还原所有 pane）
+    grid.classList.remove('has-fs-pane');
+    grid.querySelectorAll('.pane.fs').forEach(p => {
+      p.classList.remove('fs');
+      const b = p.querySelector('.pane-fs-btn');
+      if (b) { b.textContent = '全屏'; b.title = '放大此分屏查看'; }
+    });
+    if (!isFs) {
+      pane.classList.add('fs');
+      grid.classList.add('has-fs-pane');
+      const b = pane.querySelector('.pane-fs-btn');
+      if (b) { b.textContent = '收回'; b.title = '还原多分屏布局'; }
+    }
   }
 
   // 2行布局：拖动上下两行之间的边界线，调整两行高度
@@ -1977,10 +2176,12 @@
     const header = pane.querySelector('.pane-header');
     header.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
+      if (previewGrid.classList.contains('has-fs-pane')) return;   // 单 pane 放大态禁止拖拽
       if (pane.classList.contains('editing')) return;   // 编辑态禁止拖拽
       if (e.target.closest('.pane-btn')) return;        // 点按钮不拖拽
       paneDrag = { pane, startX: e.clientX, moved: false };
       pane.classList.add('dragging');
+      previewGrid.classList.add('pane-dragging');       // 拖拽期间禁用 iframe 鼠标事件
       e.preventDefault();
     });
   }
@@ -2002,7 +2203,7 @@
   }
 
   function distributePanes(ordered) {
-    if (gridTwoRows) {
+    if (computeMultiGrid(ordered.length).rows === 2) {
       const top = previewGrid.querySelector('.grid-row.top');
       const bottom = previewGrid.querySelector('.grid-row.bottom');
       if (!top || !bottom) { previewGrid.replaceChildren(...ordered); return; }
@@ -2208,7 +2409,7 @@
       }
       if (!target) return;
       const rect = target.getBoundingClientRect();
-      const before = gridTwoRows
+      const before = computeMultiGrid(panes.length).rows === 2
         ? (e.clientY < rect.top + rect.height / 2)
         : (e.clientX < rect.left + rect.width / 2);
       reorderPanes(pane, target, before);
@@ -2227,6 +2428,7 @@
       const pane = paneDrag.pane;
       paneDrag = null;
       pane.classList.remove('dragging');
+      previewGrid.classList.remove('pane-dragging');
       reorderPanesFromDom();
     }
   });

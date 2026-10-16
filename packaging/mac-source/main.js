@@ -6,6 +6,7 @@ const { buildHtml, buildMergedHtml, extractHeadings, buildDocx, extractMermaidBl
 const { Packer } = require('docx');
 const sharp = require('sharp');
 const { pathToFileURL } = require('url');
+const { convertDocxToMarkdown, convertDocxToHtml } = require('./docx2md');
 
 // Mermaid 库本地化：随应用分发的本地 mermaid.min.js，避免依赖 CDN
 const MERMAID_SRC = pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
@@ -166,6 +167,16 @@ ipcMain.handle('get-app-info', async () => {
     buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
   }
   return { version: app.getVersion(), buildDate };
+});
+
+// 预览 iframe 内的外部链接（http/https/mailto）→ 交给系统默认浏览器打开，避免 iframe 被导航走、无法返回
+ipcMain.handle('open-external', async (_, url) => {
+  if (typeof url !== 'string') return { ok: false };
+  if (/^(https?|mailto):/i.test(url)) {
+    await shell.openExternal(url);
+    return { ok: true };
+  }
+  return { ok: false };
 });
 
 // 从 markdown 文件路径推导所在目录（用于解析相对图片路径）
@@ -1024,6 +1035,103 @@ ipcMain.handle('convert-word', async (event, { mdContent, filename, srcPath }) =
     return { success: true, filePath };
   } catch (error) {
     safeLog('convert-word error:', error);
+    throw error;
+  }
+});
+
+// 把 markdown 中的 ./assets/xxx 图片引用替换为 base64 内联（预览/HTML 导出通用，生成单文件自包含 HTML）
+function inlineDocxImages(markdown, images) {
+  let md = markdown;
+  for (const img of images) {
+    const dataUri = `data:${img.mime};base64,${img.buffer.toString('base64')}`;
+    md = md.split(`./assets/${img.filename}`).join(dataUri);
+  }
+  return md;
+}
+
+// 转换：Word (.docx) → 预览 HTML（Word→MD 与 Word→HTML 共用的预览步骤，先核对无损结果再落盘）
+ipcMain.handle('convert-docx-to-md', async (event, srcPath) => {
+  try {
+    safeLog('convert-docx-to-md handler called, srcPath:', srcPath);
+    const { markdown, images, stats } = await convertDocxToMarkdown(srcPath);
+    const baseName = path.basename(srcPath, path.extname(srcPath));
+    const html = buildHtml(inlineDocxImages(markdown, images), '');
+    safeLog('convert-docx-to-md done, stats:', stats);
+    return { html, baseName, stats };
+  } catch (error) {
+    safeLog('convert-docx-to-md error:', error);
+    return { error: error && error.message ? error.message : String(error) };
+  }
+});
+
+// 转换：Word (.docx) → 预览 HTML（Word→HTML 专用：表格/嵌入 Excel 输出为带颜色与合并的原生 HTML）
+ipcMain.handle('convert-docx-to-html', async (event, srcPath) => {
+  try {
+    safeLog('convert-docx-to-html handler called, srcPath:', srcPath);
+    const { markdown, images, stats } = await convertDocxToHtml(srcPath);
+    const baseName = path.basename(srcPath, path.extname(srcPath));
+    const html = buildHtml(inlineDocxImages(markdown, images), '');
+    safeLog('convert-docx-to-html done, stats:', stats);
+    return { html, baseName, stats };
+  } catch (error) {
+    safeLog('convert-docx-to-html error:', error);
+    return { error: error && error.message ? error.message : String(error) };
+  }
+});
+
+// 保存：Word (.docx) → Markdown（重新转换取最新，写 .md + assets/ 图片）
+ipcMain.handle('save-docx-md', async (event, srcPath) => {
+  try {
+    safeLog('save-docx-md handler called, srcPath:', srcPath);
+    const { markdown, images } = await convertDocxToMarkdown(srcPath);
+    const baseName = path.basename(srcPath, path.extname(srcPath));
+
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      defaultPath: baseName + '.md',
+      filters: [{ name: 'Markdown', extensions: ['md'] }]
+    });
+    if (canceled || !filePath) return { success: false };
+
+    fs.writeFileSync(filePath, markdown, 'utf-8');
+
+    // 图片写入同目录 assets/ 子文件夹（md 内以 ./assets/ 相对路径引用）
+    if (images.length) {
+      const assetsDir = path.join(path.dirname(filePath), 'assets');
+      fs.mkdirSync(assetsDir, { recursive: true });
+      for (const img of images) {
+        fs.writeFileSync(path.join(assetsDir, img.filename), img.buffer);
+      }
+    }
+
+    safeLog('save-docx-md done:', filePath, 'images:', images.length);
+    return { success: true, filePath };
+  } catch (error) {
+    safeLog('save-docx-md error:', error);
+    throw error;
+  }
+});
+
+// 保存：Word (.docx) → HTML（图片内联 base64，生成单文件自包含 HTML 并在浏览器打开）
+ipcMain.handle('save-docx-html', async (event, srcPath) => {
+  try {
+    safeLog('save-docx-html handler called, srcPath:', srcPath);
+    const { markdown, images } = await convertDocxToHtml(srcPath);
+    const baseName = path.basename(srcPath, path.extname(srcPath));
+
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      defaultPath: baseName + '.html',
+      filters: [{ name: 'HTML', extensions: ['html'] }]
+    });
+    if (canceled || !filePath) return { success: false };
+
+    const html = buildHtml(inlineDocxImages(markdown, images), '');
+    fs.writeFileSync(filePath, html, 'utf-8');
+    shell.openPath(filePath);
+
+    safeLog('save-docx-html done:', filePath, 'images:', images.length);
+    return { success: true, filePath };
+  } catch (error) {
+    safeLog('save-docx-html error:', error);
     throw error;
   }
 });
