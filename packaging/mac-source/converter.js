@@ -129,10 +129,9 @@ function groupImageRows(html) {
   });
 }
 
-function buildHtml(mdContent, basedir, mermaidSrc) {
-  const useA3 = hasWideTable(mdContent);
-  // Mermaid 库本地化：默认加载随应用分发的本地文件，避免依赖 CDN（jsdelivr 在国内常被重置连接）
-  const MERMAID_SRC = mermaidSrc || pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
+// 把单个 markdown 渲染成正文 HTML（内联图片 + mermaid 占位 + 图片行分组）
+// 抽成独立函数，便于单文件预览与多文件合并共用同一套渲染逻辑
+function renderBody(mdContent, basedir) {
   const renderer = new marked.Renderer();
   renderer.code = function({ text, lang }) {
     if (lang === 'mermaid') {
@@ -148,7 +147,14 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
     const altAttr = (text || '').replace(/"/g, '&quot;');
     return `<img src="${src}" alt="${altAttr}"${titleAttr}>`;
   };
-  const bodyHtml = groupImageRows(marked.parse(mdContent, { renderer }));
+  return groupImageRows(marked.parse(mdContent, { renderer }));
+}
+
+function buildHtml(mdContent, basedir, mermaidSrc) {
+  const useA3 = hasWideTable(mdContent);
+  // Mermaid 库本地化：默认加载随应用分发的本地文件，避免依赖 CDN（jsdelivr 在国内常被重置连接）
+  const MERMAID_SRC = mermaidSrc || pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
+  const bodyHtml = renderBody(mdContent, basedir);
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -177,7 +183,7 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   }
   /* 左侧导航栏 */
   #sidebar {
-    width: 280px;
+    width: var(--sidebar-w, 280px);
     background: #f8f9fa;
     border-right: 1px solid #e1e4e8;
     height: 100vh;
@@ -236,9 +242,14 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
 
   /* 主内容区 */
   #main {
-    margin-left: 280px;
-    padding: 36px 50px;
+    margin-left: var(--sidebar-w, 280px);
     max-width: ${useA3 ? 1450 : 1000}px;
+  }
+  #content {
+    zoom: var(--zoom, 1);
+    padding: 36px 50px;
+    /* 用 JS 直接写入具体长度，避免 calc() 除以 var() 的兼容性坑（会导致 max-width 失效 → 放大后内容溢出到右侧留白） */
+    max-width: var(--content-max-w, ${useA3 ? 1450 : 1000}px);
   }
   h1, h2, h3, h4, h5, h6 {
     margin-top: 24px;
@@ -296,17 +307,182 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   .img-row { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; page-break-inside: avoid; }
   .img-row img { flex: 0 1 auto; min-width: 0; max-width: calc(100% / var(--n, 3) - 8px); height: auto; margin: 0; }
 
+  /* 正文图片可点击放大 */
+  #main img { cursor: zoom-in; }
+
+  /* 右上角正文缩放工具条 */
+  #zoom-toolbar {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 160;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  }
+  #zoom-toolbar button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    font-size: 15px;
+    line-height: 1;
+    color: #24292e;
+  }
+  #zoom-toolbar button:hover { background: #e6f0ff; color: #0366d6; }
+  #zoom-level {
+    min-width: 46px;
+    text-align: center;
+    font-size: 12px;
+    color: #586069;
+    font-variant-numeric: tabular-nums;
+  }
+  #zoom-reset { font-size: 12px; padding: 0 8px; margin-left: 5px; }
+  #zoom-in, #zoom-out { font-weight: 700; font-size: 18px; min-width: 30px; height: 30px; }
+
+  /* 导航栏折叠 / 展开 */
+  #sidebar-header-top { display: flex; align-items: center; justify-content: space-between; }
+  #sidebar-header-top h2 { margin-bottom: 0; }
+  #collapse-btn {
+    border: none;
+    background: transparent;
+    color: #6a737d;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  #collapse-btn:hover { background: #e6e9ec; color: #0366d6; }
+  #expand-btn {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 160;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e1e4e8;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #0366d6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  }
+  body.collapsed #sidebar { display: none; }
+  body.collapsed #sidebar-resizer { display: none; }
+  body.collapsed #main { margin-left: 0; }
+  body.collapsed #expand-btn { display: block; }
+
+  /* 导航栏宽度拖动条 */
+  #sidebar-resizer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--sidebar-w, 280px) - 3px);
+    width: 6px;
+    cursor: col-resize;
+    z-index: 101;
+  }
+  #sidebar-resizer:hover { background: rgba(3, 102, 214, 0.25); }
+
+  /* 图片全屏 lightbox */
+  #lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: rgba(0, 0, 0, 0.9);
+  }
+  #lightbox.hidden { display: none; }
+  #lightbox-stage {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    cursor: grab;
+  }
+  #lightbox-stage:active { cursor: grabbing; }
+  #lightbox-img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform-origin: 0 0;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  #lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 310;
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  #lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }
+  #lightbox-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 310;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+  }
+  #lightbox-controls button {
+    border: none;
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    font-size: 16px;
+    line-height: 1;
+  }
+  #lightbox-controls button:hover { background: rgba(255, 255, 255, 0.25); }
+  #lightbox-controls #lb-level {
+    min-width: 48px;
+    text-align: center;
+    color: #fff;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  #lightbox-controls #lb-reset { font-size: 12px; padding: 0 10px; }
+
   @media (max-width: 800px) {
-    #sidebar { display: none; }
-    #main { margin-left: 0; padding: 20px; max-width: 100%; }
+    #sidebar, #sidebar-resizer, #expand-btn { display: none; }
+    #main { margin-left: 0; max-width: 100%; }
+    #content { padding: 20px; zoom: 1; max-width: 100%; }
   }
   @page {
     size: ${useA3 ? 'A3' : 'A4'};
     margin: 20mm;
   }
   @media print {
-    #sidebar, #progress-bar { display: none; }
-    #main { margin-left: 0; padding: 20px; max-width: 100%; }
+    #sidebar, #progress-bar, #sidebar-resizer, #zoom-toolbar, #expand-btn, #collapse-btn, #lightbox { display: none !important; }
+    #main { margin-left: 0 !important; max-width: 100% !important; }
+    #content { zoom: 1 !important; padding: 20px !important; max-width: 100% !important; }
     .mermaid { page-break-inside: avoid; }
     table { page-break-inside: avoid; }
 
@@ -326,16 +502,41 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
 <div id="progress-bar"></div>
 <aside id="sidebar">
   <div id="sidebar-header">
-    <h2>目录</h2>
+    <div id="sidebar-header-top">
+      <h2>目录</h2>
+      <button id="collapse-btn" title="收起导航栏" aria-label="收起导航栏">«</button>
+    </div>
     <div id="progress-text">阅读进度 0%</div>
   </div>
   <div id="toc-wrapper">
     <ul id="toc"></ul>
   </div>
 </aside>
+<button id="expand-btn" title="展开导航栏" aria-label="展开导航栏">»</button>
+<div id="sidebar-resizer"></div>
+<div id="zoom-toolbar">
+  <button id="zoom-out" title="缩小" aria-label="缩小">−</button>
+  <span id="zoom-level">100%</span>
+  <button id="zoom-in" title="放大" aria-label="放大">+</button>
+  <button id="zoom-reset" title="重置缩放">重置</button>
+</div>
 <main id="main">
+  <div id="content">
 ${bodyHtml}
+  </div>
 </main>
+<div id="lightbox" class="hidden">
+  <button id="lightbox-close" title="关闭" aria-label="关闭">×</button>
+  <div id="lightbox-stage">
+    <div id="lightbox-img"></div>
+  </div>
+  <div id="lightbox-controls">
+    <button id="lb-zoom-out" title="缩小" aria-label="缩小">−</button>
+    <span id="lb-level">100%</span>
+    <button id="lb-zoom-in" title="放大" aria-label="放大">+</button>
+    <button id="lb-reset" title="重置缩放">重置</button>
+  </div>
+</div>
 <script>
   // 生成目录 + 滚动追踪（独立运行，不依赖 mermaid）
   (function() {
@@ -427,6 +628,200 @@ ${bodyHtml}
     });
   })();
 </script>
+<script>
+  // ===== 正文缩放 / 导航栏宽度·折叠 / 图片 lightbox =====
+  (function() {
+    var main = document.getElementById('main');
+    var content = document.getElementById('content');
+    var body = document.body;
+
+    // ---- 正文缩放（仅 #content，不影响导航栏）----
+    var zoomPct = 100;
+    var BASE = ${useA3 ? 1450 : 1000};
+    var zoomLevelEl = document.getElementById('zoom-level');
+    function applyZoom() {
+      var z = zoomPct / 100;
+      content.style.setProperty('--zoom', String(z));
+      // 缩放后内容渲染宽度 = 布局宽度 × z，因此布局宽度要设为 BASE/z，放大后正好撑满、不溢出到右侧留白
+      content.style.setProperty('--content-max-w', (BASE / z) + 'px');
+      zoomLevelEl.textContent = zoomPct + '%';
+    }
+    function setZoom(pct) {
+      zoomPct = Math.min(300, Math.max(50, Math.round(pct / 10) * 10));
+      applyZoom();
+    }
+    document.getElementById('zoom-in').addEventListener('click', function() { setZoom(zoomPct + 10); });
+    document.getElementById('zoom-out').addEventListener('click', function() { setZoom(zoomPct - 10); });
+    document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(100); });
+    applyZoom();
+
+    // ---- 导航栏宽度 / 折叠 ----
+    var SIDEBAR_MIN = 160, SIDEBAR_MAX = 800;
+    var sidebarW = 280, collapsed = false;
+    var resizer = document.getElementById('sidebar-resizer');
+
+    function applySidebar() {
+      document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
+      body.classList.toggle('collapsed', collapsed);
+    }
+    function setCollapsed(c) { collapsed = c; applySidebar(); }
+    document.getElementById('collapse-btn').addEventListener('click', function() { setCollapsed(true); });
+    document.getElementById('expand-btn').addEventListener('click', function() { setCollapsed(false); });
+
+    resizer.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      var startX = e.clientX, startW = sidebarW;
+      function onMove(ev) {
+        var maxW = Math.min(SIDEBAR_MAX, window.innerWidth * 0.6);
+        sidebarW = Math.min(maxW, Math.max(SIDEBAR_MIN, startW + (ev.clientX - startX)));
+        document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.cursor = '';
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.body.style.cursor = 'col-resize';
+    });
+    applySidebar();
+
+    // ---- 图片 lightbox ----
+    var lightbox = document.getElementById('lightbox');
+    var lbImg = document.getElementById('lightbox-img');
+    var lbLevel = document.getElementById('lb-level');
+    var stage = document.getElementById('lightbox-stage');
+    var lb = { base: 1, k: 1, tx: 0, ty: 0, iw: 1, ih: 1 };
+    var didDrag = false;
+
+    function lbApply() {
+      lbImg.style.transform = 'translate(' + lb.tx + 'px,' + lb.ty + 'px) scale(' + (lb.base * lb.k) + ')';
+      lbLevel.textContent = Math.round(lb.k * 100) + '%';
+    }
+    function lbReset() {
+      var sw = stage.clientWidth, sh = stage.clientHeight;
+      lb.base = Math.min(sw / lb.iw, sh / lb.ih, 1);
+      lb.k = 1;
+      lb.tx = (sw - lb.iw * lb.base) / 2;
+      lb.ty = (sh - lb.ih * lb.base) / 2;
+      lbApply();
+    }
+    function lbShow() {
+      lightbox.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function lbOpenImage(img) {
+      var im = document.createElement('img');
+      im.src = img.src;
+      im.style.maxWidth = 'none';
+      im.style.maxHeight = 'none';
+      lbImg.innerHTML = '';
+      lbImg.appendChild(im);
+      lbShow();
+      if (im.complete && im.naturalWidth) {
+        lb.iw = im.naturalWidth; lb.ih = im.naturalHeight; lbReset();
+      } else {
+        im.onload = function() {
+          lb.iw = im.naturalWidth || im.width || 1;
+          lb.ih = im.naturalHeight || im.height || 1;
+          lbReset();
+        };
+      }
+    }
+    function lbOpenSvg(svg) {
+      var rect = svg.getBoundingClientRect();
+      var vb = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : null;
+      var w = rect.width || (vb && vb.width) || (svg.width && svg.width.baseVal && svg.width.baseVal.value) || 600;
+      var h = rect.height || (vb && vb.height) || (svg.height && svg.height.baseVal && svg.height.baseVal.value) || 400;
+      var clone = svg.cloneNode(true);
+      clone.style.maxWidth = 'none';
+      clone.style.maxHeight = 'none';
+      clone.style.width = w + 'px';
+      clone.style.height = h + 'px';
+      // 放大查看时铺白底，避免黑色 lightbox 背景下灰色线条难以辨认
+      clone.style.background = '#ffffff';
+      lbImg.innerHTML = '';
+      lbImg.appendChild(clone);
+      lb.iw = w; lb.ih = h;
+      lbShow();
+      lbReset();
+    }
+    function lbClose() {
+      lightbox.classList.add('hidden');
+      document.body.style.overflow = '';
+      lbImg.innerHTML = '';
+    }
+    function lbZoom(factor, cx, cy) {
+      var newK = Math.min(10, Math.max(0.1, lb.k * factor));
+      var ratio = newK / lb.k;
+      lb.tx = cx - (cx - lb.tx) * ratio;
+      lb.ty = cy - (cy - lb.ty) * ratio;
+      lb.k = newK;
+      lbApply();
+    }
+
+    document.querySelectorAll('#main img').forEach(function(img) {
+      img.addEventListener('click', function() { lbOpenImage(img); });
+    });
+    document.querySelectorAll('#main .mermaid').forEach(function(m) {
+      m.style.cursor = 'zoom-in';
+      m.addEventListener('click', function(e) {
+        var svg = m.querySelector('svg');
+        if (!svg) return;
+        e.stopPropagation();
+        lbOpenSvg(svg);
+      });
+    });
+
+    document.getElementById('lightbox-close').addEventListener('click', lbClose);
+    document.getElementById('lb-zoom-in').addEventListener('click', function() {
+      lbZoom(1.25, stage.clientWidth / 2, stage.clientHeight / 2);
+    });
+    document.getElementById('lb-zoom-out').addEventListener('click', function() {
+      lbZoom(0.8, stage.clientWidth / 2, stage.clientHeight / 2);
+    });
+    document.getElementById('lb-reset').addEventListener('click', lbReset);
+
+    // 点击空白处关闭（拖拽后忽略一次点击，避免误关）
+    lightbox.addEventListener('click', function(e) {
+      if (didDrag) { didDrag = false; return; }
+      if (e.target === lightbox || e.target === stage) lbClose();
+    });
+
+    // 滚轮缩放（围绕光标位置）
+    stage.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      var rect = stage.getBoundingClientRect();
+      lbZoom(e.deltaY < 0 ? 1.2 : 0.8333, e.clientX - rect.left, e.clientY - rect.top);
+    }, { passive: false });
+
+    // 拖动平移（放大后）
+    stage.addEventListener('mousedown', function(e) {
+      if (lb.k <= 1) return;
+      e.preventDefault();
+      var sx = e.clientX, sy = e.clientY, ox = lb.tx, oy = lb.ty;
+      didDrag = false;
+      function onMove(ev) {
+        if (Math.abs(ev.clientX - sx) > 3 || Math.abs(ev.clientY - sy) > 3) didDrag = true;
+        lb.tx = ox + (ev.clientX - sx);
+        lb.ty = oy + (ev.clientY - sy);
+        lbApply();
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    // Esc 关闭
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) lbClose();
+    });
+  })();
+</script>
 <script src="${MERMAID_SRC}"></script>
 <script>
   try {
@@ -439,7 +834,784 @@ ${bodyHtml}
 </html>`;
 }
 
-module.exports = { buildHtml, extractHeadings, buildDocx, extractMermaidBlocks, hasWideTable };
+// 多个 markdown 文件合并为一个自包含 HTML：
+// 顶部可拖拽排序、可重命名的标签页（一次只显示一个文件），
+// 左侧目录按文件名分组汇总，支持跨文件跳转；文件名写入导出后的 HTML。
+function buildMergedHtml(files, mermaidSrc) {
+  const list = (files || []).filter(f => f && typeof f.content === 'string');
+  const useA3 = list.some(f => hasWideTable(f.content));
+  const BASE = useA3 ? 1450 : 1000;
+  const MERMAID_SRC = mermaidSrc || pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
+
+  function basedirOf(srcPath) {
+    try { return srcPath ? path.dirname(srcPath) : ''; } catch (e) { return ''; }
+  }
+
+  const sectionsHtml = list.map((f, i) =>
+    '<section class="doc-section' + (i === 0 ? ' active' : '') + '" id="doc-' + i + '" data-idx="' + i + '">\n' +
+    '  <div class="doc-file-title"></div>\n' +
+    '  <div class="doc-body">' + renderBody(f.content, basedirOf(f.srcPath)) + '</div>\n' +
+    '</section>'
+  ).join('\n');
+
+  const docsJson = JSON.stringify(list.map(f => ({ name: f.name || '' }))).replace(/</g, '\\u003c');
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei","PingFang SC",Arial,sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #24292e;
+    background: #ffffff;
+  }
+
+  /* 顶部阅读进度条 */
+  #progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #0366d6, #2188ff);
+    z-index: 200;
+    width: 0;
+    transition: width 0.1s ease-out;
+  }
+  #progress-text { font-size: 11px; color: #8b949e; }
+
+  /* 顶部标签栏（可拖拽排序、双击重命名） */
+  #tab-bar {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-w, 280px);
+    right: 0;
+    height: 44px;
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-bottom: 1px solid #e1e4e8;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  #tabs { display: flex; align-items: center; gap: 4px; padding: 0 12px; }
+  .tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    background: #f6f8fa;
+    cursor: grab;
+    font-size: 12.5px;
+    color: #24292e;
+    white-space: nowrap;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .tab:hover { border-color: #0366d6; }
+  .tab.active { background: #0366d6; color: #fff; border-color: #0366d6; }
+  .tab.dragging { opacity: 0.4; }
+  .tab-rename-input {
+    font-size: 12.5px;
+    padding: 2px 6px;
+    width: 140px;
+    border: 1px solid #0366d6;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  /* 左侧目录（按文件名分组汇总） */
+  #sidebar {
+    width: var(--sidebar-w, 280px);
+    background: #f8f9fa;
+    border-right: 1px solid #e1e4e8;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+  #sidebar-header {
+    padding: 18px 20px 10px;
+    border-bottom: 1px solid #e1e4e8;
+    flex-shrink: 0;
+  }
+  #sidebar-header h2 {
+    font-size: 12px;
+    font-weight: 600;
+    color: #6a737d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+  #sidebar-header-top { display: flex; align-items: center; justify-content: space-between; }
+  #sidebar-header-top h2 { margin-bottom: 0; }
+  #toc-wrapper { flex: 1; overflow-y: auto; padding: 10px 0 20px; }
+  #toc { list-style: none; padding: 0; margin: 0; }
+  #toc .toc-group { margin: 0 0 6px; }
+  #toc .toc-file {
+    display: block;
+    padding: 6px 20px 6px 14px;
+    color: #1a1a1a;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+    background: #eef1f4;
+    border-left: 3px solid #0366d6;
+    line-height: 1.4;
+  }
+  #toc .toc-file:hover { color: #0366d6; }
+  #toc .toc-sub { list-style: none; padding: 0; margin: 0; }
+  #toc .toc-sub a {
+    display: block;
+    padding: 4px 20px 4px 18px;
+    color: #586069;
+    text-decoration: none;
+    font-size: 12px;
+    border-left: 3px solid transparent;
+    line-height: 1.4;
+  }
+  #toc .toc-sub a:hover { background: #e6e9ec; color: #0366d6; }
+  #toc .toc-sub a.active {
+    color: #0366d6;
+    font-weight: 600;
+    background: #e6f0ff;
+    border-left-color: #0366d6;
+  }
+  #toc .toc-sub .lvl-1 { font-weight: 600; color: #1a1a1a; padding-left: 20px; }
+  #toc .toc-sub .lvl-2 { padding-left: 26px; }
+  #toc .toc-sub .lvl-3 { padding-left: 40px; font-size: 11.5px; }
+  #toc .toc-sub .lvl-4 { padding-left: 54px; font-size: 11px; color: #6a737d; }
+
+  /* 主内容区 */
+  #main {
+    margin-left: var(--sidebar-w, 280px);
+    max-width: ${BASE}px;
+  }
+  #content {
+    zoom: var(--zoom, 1);
+    padding: 64px 50px 36px;
+    max-width: var(--content-max-w, ${BASE}px);
+  }
+  .doc-section { display: none; scroll-margin-top: 60px; }
+  .doc-section.active { display: block; }
+  .doc-file-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0366d6;
+    border-bottom: 2px solid #0366d6;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #1a1a1a;
+    scroll-margin-top: 64px;
+  }
+  h1 { font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-top: 0; }
+  h2 { font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-top: 32px; }
+  h3 { font-size: 15px; margin-top: 24px; }
+  h4 { font-size: 13px; margin-top: 16px; }
+  p { margin: 8px 0; }
+  ul, ol { padding-left: 24px; }
+  li { margin: 3px 0; }
+  blockquote {
+    border-left: 4px solid #0366d6;
+    background: #f1f8ff;
+    margin: 12px 0;
+    padding: 8px 14px;
+    color: #444;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 12px;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #f0f0f0; font-weight: bold; }
+  tr:nth-child(even) td { background: #fafafa; }
+  code {
+    background: #f4f4f4;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+  }
+  pre { background: #f4f4f4; padding: 12px; border-radius: 4px; overflow: auto; }
+  pre code { background: none; padding: 0; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 24px 0; }
+  strong { color: #1a1a1a; }
+  a { color: #0366d6; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .mermaid { text-align: center; margin: 20px 0; }
+  .mermaid svg { max-width: 100%; height: auto; }
+  img { max-width: 100%; height: auto; display: block; margin: 12px 0; }
+  .img-row { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; page-break-inside: avoid; }
+  .img-row img { flex: 0 1 auto; min-width: 0; max-width: calc(100% / var(--n, 3) - 8px); height: auto; margin: 0; }
+  #main img { cursor: zoom-in; }
+
+  /* 右上角缩放工具条（下移到标签栏下方） */
+  #zoom-toolbar {
+    position: fixed;
+    top: 54px;
+    right: 14px;
+    z-index: 160;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #e1e4e8;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  }
+  #zoom-toolbar button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    min-width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    font-size: 15px;
+    line-height: 1;
+    color: #24292e;
+  }
+  #zoom-toolbar button:hover { background: #e6f0ff; color: #0366d6; }
+  #zoom-level { min-width: 46px; text-align: center; font-size: 12px; color: #586069; font-variant-numeric: tabular-nums; }
+  #zoom-reset { font-size: 12px; padding: 0 8px; margin-left: 5px; }
+  #zoom-in, #zoom-out { font-weight: 700; font-size: 18px; min-width: 30px; height: 30px; }
+
+  #collapse-btn {
+    border: none;
+    background: transparent;
+    color: #6a737d;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+  #collapse-btn:hover { background: #e6e9ec; color: #0366d6; }
+  #expand-btn {
+    display: none;
+    position: fixed;
+    top: 54px;
+    left: 14px;
+    z-index: 160;
+    width: 36px;
+    height: 36px;
+    border: 1px solid #e1e4e8;
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    color: #0366d6;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  }
+  body.collapsed #sidebar { display: none; }
+  body.collapsed #sidebar-resizer { display: none; }
+  body.collapsed #tab-bar { left: 0; }
+  body.collapsed #main { margin-left: 0; }
+  body.collapsed #expand-btn { display: block; }
+
+  #sidebar-resizer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: calc(var(--sidebar-w, 280px) - 3px);
+    width: 6px;
+    cursor: col-resize;
+    z-index: 101;
+  }
+  #sidebar-resizer:hover { background: rgba(3, 102, 214, 0.25); }
+
+  /* 图片全屏 lightbox（与单文件一致） */
+  #lightbox { position: fixed; inset: 0; z-index: 300; background: rgba(0, 0, 0, 0.9); }
+  #lightbox.hidden { display: none; }
+  #lightbox-stage { position: absolute; inset: 0; overflow: hidden; cursor: grab; }
+  #lightbox-stage:active { cursor: grabbing; }
+  #lightbox-img { position: absolute; left: 0; top: 0; transform-origin: 0 0; max-width: none; max-height: none; margin: 0; user-select: none; -webkit-user-drag: none; }
+  #lightbox-close { position: absolute; top: 16px; right: 16px; z-index: 310; width: 40px; height: 40px; border: none; border-radius: 50%; background: rgba(255, 255, 255, 0.15); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
+  #lightbox-close:hover { background: rgba(255, 255, 255, 0.3); }
+  #lightbox-controls { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 310; display: flex; align-items: center; gap: 2px; padding: 4px; background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
+  #lightbox-controls button { border: none; background: transparent; color: #fff; cursor: pointer; min-width: 32px; height: 32px; border-radius: 6px; font-size: 16px; line-height: 1; }
+  #lightbox-controls button:hover { background: rgba(255, 255, 255, 0.25); }
+  #lightbox-controls #lb-level { min-width: 48px; text-align: center; color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
+  #lightbox-controls #lb-reset { font-size: 12px; padding: 0 10px; }
+
+  @media (max-width: 800px) {
+    #sidebar, #sidebar-resizer, #expand-btn { display: none; }
+    #tab-bar { left: 0; }
+    #main { margin-left: 0; max-width: 100%; }
+    #content { padding: 64px 20px 20px; zoom: 1; max-width: 100%; }
+  }
+  @page {
+    size: ${useA3 ? 'A3' : 'A4'};
+    margin: 20mm;
+  }
+  @media print {
+    #sidebar, #tab-bar, #sidebar-resizer, #zoom-toolbar, #expand-btn, #collapse-btn, #lightbox { display: none !important; }
+    #main { margin-left: 0 !important; max-width: 100% !important; }
+    #content { zoom: 1 !important; padding: 20px !important; max-width: 100% !important; }
+    .doc-section { display: block !important; }
+    .mermaid { page-break-inside: avoid; }
+    table { page-break-inside: avoid; }
+    body { font-size: 12pt; }
+    h1 { font-size: 22pt; }
+    h2 { font-size: 17pt; }
+    h3 { font-size: 14pt; }
+    h4 { font-size: 12.5pt; }
+    table { font-size: 11pt; }
+    code { font-size: 10.5pt; }
+  }
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+<div id="tab-bar"><div id="tabs"></div></div>
+<aside id="sidebar">
+  <div id="sidebar-header">
+    <div id="sidebar-header-top">
+      <h2>目录（汇总所有文件）</h2>
+      <button id="collapse-btn" title="收起导航栏" aria-label="收起导航栏">«</button>
+    </div>
+    <div id="progress-text">阅读进度 0%</div>
+  </div>
+  <div id="toc-wrapper"><ul id="toc"></ul></div>
+</aside>
+<button id="expand-btn" title="展开导航栏" aria-label="展开导航栏">»</button>
+<div id="sidebar-resizer"></div>
+<div id="zoom-toolbar">
+  <button id="zoom-out" title="缩小" aria-label="缩小">−</button>
+  <span id="zoom-level">100%</span>
+  <button id="zoom-in" title="放大" aria-label="放大">+</button>
+  <button id="zoom-reset" title="重置缩放">重置</button>
+</div>
+<main id="main">
+  <div id="content">
+${sectionsHtml}
+  </div>
+</main>
+<div id="lightbox" class="hidden">
+  <button id="lightbox-close" title="关闭" aria-label="关闭">×</button>
+  <div id="lightbox-stage"><div id="lightbox-img"></div></div>
+  <div id="lightbox-controls">
+    <button id="lb-zoom-out" title="缩小" aria-label="缩小">−</button>
+    <span id="lb-level">100%</span>
+    <button id="lb-zoom-in" title="放大" aria-label="放大">+</button>
+    <button id="lb-reset" title="重置缩放">重置</button>
+  </div>
+</div>
+<script>
+  // ===== 标签页（拖拽排序 / 双击重命名）+ 汇总目录（按文件分组，跨文件跳转） =====
+  (function() {
+    var docs = ${docsJson};
+    var docOrder = docs.map(function(_, i) { return i; });
+    var active = 0;
+    var dragFromPos = null;
+    var tabsEl = document.getElementById('tabs');
+    var tocEl = document.getElementById('toc');
+    var sections = Array.from(document.querySelectorAll('.doc-section'));
+
+    function switchTo(docIdx) {
+      active = docIdx;
+      sections.forEach(function(sec) {
+        sec.classList.toggle('active', Number(sec.getAttribute('data-idx')) === docIdx);
+      });
+      updateTabActive();
+      updateActiveToc();
+      updateProgress();
+    }
+
+    // 切换时只改高亮、不重建 DOM，避免重渲染打断标签的「双击」检测
+    function updateTabActive() {
+      document.querySelectorAll('#tabs .tab').forEach(function(tab) {
+        tab.classList.toggle('active', Number(tab.getAttribute('data-doc-idx')) === active);
+      });
+    }
+
+    function renderTabs() {
+      tabsEl.innerHTML = '';
+      docOrder.forEach(function(docIdx) {
+        var tab = document.createElement('div');
+        tab.className = 'tab' + (docIdx === active ? ' active' : '');
+        tab.setAttribute('draggable', 'true');
+        tab.setAttribute('data-doc-idx', docIdx);
+        tab.title = '双击重命名，拖拽排序';
+        var label = document.createElement('span');
+        label.className = 'tab-label';
+        label.textContent = docs[docIdx].name || ('文档 ' + (docIdx + 1));
+        tab.appendChild(label);
+        tab.addEventListener('click', function() { switchTo(docIdx); });
+        tab.addEventListener('dblclick', function() { startRename(tab, docIdx); });
+        tab.addEventListener('dragstart', function(e) {
+          dragFromPos = docOrder.indexOf(docIdx);
+          tab.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        tab.addEventListener('dragend', function() { tab.classList.remove('dragging'); dragFromPos = null; });
+        tab.addEventListener('dragover', function(e) { e.preventDefault(); });
+        tab.addEventListener('drop', function(e) {
+          e.preventDefault();
+          var from = dragFromPos;
+          var to = docOrder.indexOf(docIdx);
+          if (from == null || from === to) return;
+          var moved = docOrder.splice(from, 1)[0];
+          docOrder.splice(to, 0, moved);
+          dragFromPos = null;
+          renderTabs();
+          buildToc();
+        });
+        tabsEl.appendChild(tab);
+      });
+    }
+
+    function startRename(tab, docIdx) {
+      var label = tab.querySelector('.tab-label');
+      if (!label) return;
+      var oldName = docs[docIdx].name;
+      var input = document.createElement('input');
+      input.className = 'tab-rename-input';
+      input.value = oldName;
+      tab.replaceChild(input, label);
+      input.focus();
+      input.select();
+      var committed = false;
+      function commit() {
+        if (committed) return;
+        committed = true;
+        var val = input.value.trim();
+        if (!val) val = oldName;
+        if (val !== oldName) {
+          docs[docIdx].name = val;
+          updateDocTitle(docIdx);
+          buildToc();
+        }
+        renderTabs();
+      }
+      input.addEventListener('blur', commit);
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { input.blur(); }
+        else if (e.key === 'Escape') { input.value = oldName; input.blur(); }
+      });
+    }
+
+    function updateDocTitle(docIdx) {
+      var sec = sections[docIdx];
+      if (sec) {
+        var t = sec.querySelector('.doc-file-title');
+        if (t) t.textContent = docs[docIdx].name;
+      }
+    }
+
+    function buildToc() {
+      tocEl.innerHTML = '';
+      docOrder.forEach(function(docIdx) {
+        var name = docs[docIdx].name || ('文档 ' + (docIdx + 1));
+        var sec = sections[docIdx];
+        var group = document.createElement('li');
+        group.className = 'toc-group';
+
+        var fileA = document.createElement('a');
+        fileA.className = 'toc-file';
+        fileA.href = '#';
+        fileA.textContent = name;
+        fileA.addEventListener('click', function(e) {
+          e.preventDefault();
+          switchTo(docIdx);
+          sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        group.appendChild(fileA);
+
+        var sub = document.createElement('ul');
+        sub.className = 'toc-sub';
+        var headings = sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4');
+        headings.forEach(function(h, i) {
+          if (!h.id) h.id = 'doc-' + docIdx + '-h-' + i;
+          var level = parseInt(h.tagName.substring(1), 10);
+          var li = document.createElement('li');
+          var a = document.createElement('a');
+          a.href = '#' + h.id;
+          a.className = 'lvl-' + level;
+          a.textContent = h.textContent;
+          a.setAttribute('data-doc-idx', docIdx);
+          a.setAttribute('data-target', h.id);
+          a.addEventListener('click', function(e) {
+            e.preventDefault();
+            switchTo(docIdx);
+            setTimeout(function() { h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30);
+          });
+          li.appendChild(a);
+          sub.appendChild(li);
+        });
+        if (headings.length > 0) group.appendChild(sub);
+        tocEl.appendChild(group);
+      });
+    }
+
+    function currentHeadings() {
+      var sec = sections[active];
+      return sec ? sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4') : [];
+    }
+
+    function updateActiveToc() {
+      var headings = currentHeadings();
+      var idx = -1;
+      var offset = 120;
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].getBoundingClientRect().top - offset <= 0) idx = i; else break;
+      }
+      var activeTarget = (idx >= 0 && headings[idx]) ? headings[idx].id : null;
+      document.querySelectorAll('#toc a[data-target]').forEach(function(a) {
+        var isActive = Number(a.getAttribute('data-doc-idx')) === active && a.getAttribute('data-target') === activeTarget;
+        a.classList.toggle('active', isActive);
+      });
+    }
+
+    var progressBar = document.getElementById('progress-bar');
+    var progressText = document.getElementById('progress-text');
+    function updateProgress() {
+      var scrollEl = document.scrollingElement || document.documentElement;
+      var fullHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight, scrollEl.scrollHeight);
+      var docHeight = fullHeight - window.innerHeight;
+      var scrolled = window.pageYOffset || scrollEl.scrollTop || document.documentElement.scrollTop || 0;
+      var pct = docHeight > 0 ? Math.min(100, Math.round((scrolled / docHeight) * 100)) : 0;
+      progressBar.style.width = pct + '%';
+      progressText.textContent = '阅读进度 ' + pct + '%';
+    }
+
+    var ticking = false;
+    window.addEventListener('scroll', function() {
+      if (!ticking) {
+        window.requestAnimationFrame(function() { updateActiveToc(); updateProgress(); ticking = false; });
+        ticking = true;
+      }
+    }, { passive: true });
+    window.addEventListener('resize', function() { updateActiveToc(); updateProgress(); });
+
+    docs.forEach(function(_, i) { updateDocTitle(i); });
+    renderTabs();
+    buildToc();
+    window.requestAnimationFrame(function() { updateActiveToc(); updateProgress(); });
+  })();
+</script>
+<script>
+  // ===== 正文缩放 / 导航栏宽度·折叠 / 图片 lightbox（与单文件一致） =====
+  (function() {
+    var content = document.getElementById('content');
+    var body = document.body;
+
+    var zoomPct = 100;
+    var BASE = ${BASE};
+    var zoomLevelEl = document.getElementById('zoom-level');
+    function applyZoom() {
+      var z = zoomPct / 100;
+      content.style.setProperty('--zoom', String(z));
+      content.style.setProperty('--content-max-w', (BASE / z) + 'px');
+      zoomLevelEl.textContent = zoomPct + '%';
+    }
+    function setZoom(pct) {
+      zoomPct = Math.min(300, Math.max(50, Math.round(pct / 10) * 10));
+      applyZoom();
+    }
+    document.getElementById('zoom-in').addEventListener('click', function() { setZoom(zoomPct + 10); });
+    document.getElementById('zoom-out').addEventListener('click', function() { setZoom(zoomPct - 10); });
+    document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(100); });
+    applyZoom();
+
+    var SIDEBAR_MIN = 160, SIDEBAR_MAX = 800;
+    var sidebarW = 280, collapsed = false;
+    var resizer = document.getElementById('sidebar-resizer');
+
+    function applySidebar() {
+      document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
+      body.classList.toggle('collapsed', collapsed);
+    }
+    function setCollapsed(c) { collapsed = c; applySidebar(); }
+    document.getElementById('collapse-btn').addEventListener('click', function() { setCollapsed(true); });
+    document.getElementById('expand-btn').addEventListener('click', function() { setCollapsed(false); });
+
+    resizer.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      var startX = e.clientX, startW = sidebarW;
+      function onMove(ev) {
+        var maxW = Math.min(SIDEBAR_MAX, window.innerWidth * 0.6);
+        sidebarW = Math.min(maxW, Math.max(SIDEBAR_MIN, startW + (ev.clientX - startX)));
+        document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.cursor = '';
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.body.style.cursor = 'col-resize';
+    });
+    applySidebar();
+
+    var lightbox = document.getElementById('lightbox');
+    var lbImg = document.getElementById('lightbox-img');
+    var lbLevel = document.getElementById('lb-level');
+    var stage = document.getElementById('lightbox-stage');
+    var lb = { base: 1, k: 1, tx: 0, ty: 0, iw: 1, ih: 1 };
+    var didDrag = false;
+
+    function lbApply() {
+      lbImg.style.transform = 'translate(' + lb.tx + 'px,' + lb.ty + 'px) scale(' + (lb.base * lb.k) + ')';
+      lbLevel.textContent = Math.round(lb.k * 100) + '%';
+    }
+    function lbReset() {
+      var sw = stage.clientWidth, sh = stage.clientHeight;
+      lb.base = Math.min(sw / lb.iw, sh / lb.ih, 1);
+      lb.k = 1;
+      lb.tx = (sw - lb.iw * lb.base) / 2;
+      lb.ty = (sh - lb.ih * lb.base) / 2;
+      lbApply();
+    }
+    function lbShow() {
+      lightbox.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    function lbOpenImage(img) {
+      var im = document.createElement('img');
+      im.src = img.src;
+      im.style.maxWidth = 'none';
+      im.style.maxHeight = 'none';
+      lbImg.innerHTML = '';
+      lbImg.appendChild(im);
+      lbShow();
+      if (im.complete && im.naturalWidth) {
+        lb.iw = im.naturalWidth; lb.ih = im.naturalHeight; lbReset();
+      } else {
+        im.onload = function() {
+          lb.iw = im.naturalWidth || im.width || 1;
+          lb.ih = im.naturalHeight || im.height || 1;
+          lbReset();
+        };
+      }
+    }
+    function lbOpenSvg(svg) {
+      var rect = svg.getBoundingClientRect();
+      var vb = svg.viewBox && svg.viewBox.baseVal ? svg.viewBox.baseVal : null;
+      var w = rect.width || (vb && vb.width) || (svg.width && svg.width.baseVal && svg.width.baseVal.value) || 600;
+      var h = rect.height || (vb && vb.height) || (svg.height && svg.height.baseVal && svg.height.baseVal.value) || 400;
+      var clone = svg.cloneNode(true);
+      clone.style.maxWidth = 'none';
+      clone.style.maxHeight = 'none';
+      clone.style.width = w + 'px';
+      clone.style.height = h + 'px';
+      // 放大查看时铺白底，避免黑色 lightbox 背景下灰色线条难以辨认
+      clone.style.background = '#ffffff';
+      lbImg.innerHTML = '';
+      lbImg.appendChild(clone);
+      lb.iw = w; lb.ih = h;
+      lbShow();
+      lbReset();
+    }
+    function lbClose() {
+      lightbox.classList.add('hidden');
+      document.body.style.overflow = '';
+      lbImg.innerHTML = '';
+    }
+    function lbZoom(factor, cx, cy) {
+      var newK = Math.min(10, Math.max(0.1, lb.k * factor));
+      var ratio = newK / lb.k;
+      lb.tx = cx - (cx - lb.tx) * ratio;
+      lb.ty = cy - (cy - lb.ty) * ratio;
+      lb.k = newK;
+      lbApply();
+    }
+
+    document.querySelectorAll('#main img').forEach(function(img) {
+      img.addEventListener('click', function() { lbOpenImage(img); });
+    });
+    document.querySelectorAll('#main .mermaid').forEach(function(m) {
+      m.style.cursor = 'zoom-in';
+      m.addEventListener('click', function(e) {
+        var svg = m.querySelector('svg');
+        if (!svg) return;
+        e.stopPropagation();
+        lbOpenSvg(svg);
+      });
+    });
+
+    document.getElementById('lightbox-close').addEventListener('click', lbClose);
+    document.getElementById('lb-zoom-in').addEventListener('click', function() { lbZoom(1.25, stage.clientWidth / 2, stage.clientHeight / 2); });
+    document.getElementById('lb-zoom-out').addEventListener('click', function() { lbZoom(0.8, stage.clientWidth / 2, stage.clientHeight / 2); });
+    document.getElementById('lb-reset').addEventListener('click', lbReset);
+
+    lightbox.addEventListener('click', function(e) {
+      if (didDrag) { didDrag = false; return; }
+      if (e.target === lightbox || e.target === stage) lbClose();
+    });
+
+    stage.addEventListener('wheel', function(e) {
+      e.preventDefault();
+      var rect = stage.getBoundingClientRect();
+      lbZoom(e.deltaY < 0 ? 1.2 : 0.8333, e.clientX - rect.left, e.clientY - rect.top);
+    }, { passive: false });
+
+    stage.addEventListener('mousedown', function(e) {
+      if (lb.k <= 1) return;
+      e.preventDefault();
+      var sx = e.clientX, sy = e.clientY, ox = lb.tx, oy = lb.ty;
+      didDrag = false;
+      function onMove(ev) {
+        if (Math.abs(ev.clientX - sx) > 3 || Math.abs(ev.clientY - sy) > 3) didDrag = true;
+        lb.tx = ox + (ev.clientX - sx);
+        lb.ty = oy + (ev.clientY - sy);
+        lbApply();
+      }
+      function onUp() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !lightbox.classList.contains('hidden')) lbClose();
+    });
+  })();
+</script>
+<script src="${MERMAID_SRC}"></script>
+<script>
+  try {
+    if (typeof mermaid !== 'undefined') {
+      mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { useMaxWidth: true } });
+    }
+  } catch(e) {}
+</script>
+</body>
+</html>`;
+}
+
+module.exports = { buildHtml, buildMergedHtml, extractHeadings, buildDocx, extractMermaidBlocks, hasWideTable };
 
 // 提取 Markdown 中所有 mermaid 代码块（供主进程渲染成图片）
 function extractMermaidBlocks(mdContent) {

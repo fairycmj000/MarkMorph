@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { PDFDocument, PDFName, PDFArray, PDFDict, PDFHexString, PDFNull, PDFNumber } = require('pdf-lib');
-const { buildHtml, extractHeadings, buildDocx, extractMermaidBlocks, hasWideTable } = require('./converter');
+const { buildHtml, buildMergedHtml, extractHeadings, buildDocx, extractMermaidBlocks, hasWideTable } = require('./converter');
 const { Packer } = require('docx');
 const sharp = require('sharp');
 const { pathToFileURL } = require('url');
@@ -11,6 +11,16 @@ const { pathToFileURL } = require('url');
 const MERMAID_SRC = pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
 
 let mainWindow = null;
+let pendingOpenPath = null; // 双击 .md 关联打开时，待预览的文件绝对路径
+
+// 从命令行参数中提取 markdown 文件路径（文件关联 / 拖到 exe 打开时由系统传入）
+function extractMdPath(args) {
+  for (const a of args || []) {
+    if (!a || a.startsWith('-')) continue;
+    if (/\.(md|markdown|mdown|mkd)$/i.test(a)) return a;
+  }
+  return null;
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -26,13 +36,47 @@ function createWindow() {
       nodeIntegration: false
     }
   });
-  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  const indexPath = path.join(__dirname, 'renderer', 'index.html');
+  if (pendingOpenPath) {
+    // 首次启动即带着文件：通过 query 把路径交给渲染层，自动进入 HTML 预览
+    win.loadFile(indexPath, { query: { open: pendingOpenPath } });
+    pendingOpenPath = null;
+  } else {
+    win.loadFile(indexPath);
+  }
   win.setMenuBarVisibility(false);
   mainWindow = win;
 }
 
-app.whenReady().then(createWindow);
-app.on('window-all-closed', () => app.quit());
+// 单实例：文件关联双击打开时，第二个实例把文件路径转交给已存在的窗口
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, argv) => {
+    const filePath = extractMdPath(argv);
+    if (filePath && mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      mainWindow.webContents.send('open-file', filePath);
+    }
+  });
+
+  // 兼容 open-file 事件（macOS 及部分 Windows 场景）
+  app.on('open-file', (event, filePath) => {
+    event.preventDefault();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('open-file', filePath);
+    } else {
+      pendingOpenPath = filePath;
+    }
+  });
+
+  pendingOpenPath = extractMdPath(process.argv.slice(1));
+
+  app.whenReady().then(createWindow);
+  app.on('window-all-closed', () => app.quit());
+}
 
 // 窗口布局切换
 ipcMain.handle('resize-layout', async (_, mode) => {
@@ -111,6 +155,19 @@ ipcMain.handle('reset-background', async () => {
   }
 });
 
+// 应用信息：版本 + 打包日期（水印自动显示最新版本的构建日期）
+ipcMain.handle('get-app-info', async () => {
+  let buildDate = '';
+  try {
+    // 打包后 app.getAppPath() 指向 app.asar，其修改时间即打包时间；开发态为源码目录
+    const mtime = fs.statSync(app.getAppPath()).mtime;
+    buildDate = '' + mtime.getFullYear() + String(mtime.getMonth() + 1).padStart(2, '0') + String(mtime.getDate()).padStart(2, '0');
+  } catch (e) {
+    buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  }
+  return { version: app.getVersion(), buildDate };
+});
+
 // 从 markdown 文件路径推导所在目录（用于解析相对图片路径）
 function basedirOf(srcPath) {
   try {
@@ -135,9 +192,25 @@ async function loadHtmlIntoWindow(win, html) {
   }
 }
 
+// 读取本地 .md 文件并返回内容（文件关联双击打开时由渲染层调用）
+ipcMain.handle('read-md-file', async (_, filePath) => {
+  try {
+    if (!filePath || typeof filePath !== 'string') return { error: 'no-path' };
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return { content, filename: path.basename(filePath), srcPath: filePath };
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
 // 预览：返回渲染好的 HTML 字符串
 ipcMain.handle('preview-md', async (_, { mdContent, srcPath }) => {
   return buildHtml(mdContent, basedirOf(srcPath));
+});
+
+// 预览：多个 markdown 合并为一个 HTML（顶部标签页 + 汇总目录）
+ipcMain.handle('preview-merge', async (_, { files }) => {
+  return buildMergedHtml(files || []);
 });
 
 // 转换：渲染 HTML → printToPDF → 添加书签 → 保存文件
@@ -427,6 +500,55 @@ ipcMain.handle('convert-html', async (event, { mdContent, filename, srcPath }) =
     `);
 
     const baseName = path.basename(filename, path.extname(filename));
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      defaultPath: baseName + '.html',
+      filters: [{ name: 'HTML', extensions: ['html'] }]
+    });
+
+    if (canceled || !filePath) return { success: false };
+
+    fs.writeFileSync(filePath, finalHtml, 'utf-8');
+    shell.openPath(filePath);
+    return { success: true, filePath };
+  } finally {
+    hidden.destroy();
+  }
+});
+
+// 导出：多个 markdown 合并后的 HTML（内联 mermaid SVG，离线可用）
+ipcMain.handle('convert-merge', async (event, { files, filename }) => {
+  const html = buildMergedHtml(files || []);
+
+  const hidden = new BrowserWindow({
+    show: false,
+    webPreferences: { offscreen: true }
+  });
+
+  try {
+    await loadHtmlIntoWindow(hidden, html);
+
+    await hidden.webContents.executeJavaScript(`
+      new Promise((resolve) => {
+        const check = () => {
+          const divs = document.querySelectorAll('.mermaid');
+          if (divs.length === 0 || Array.from(divs).every(d => d.querySelector('svg'))) {
+            resolve();
+          } else {
+            setTimeout(check, 200);
+          }
+        };
+        setTimeout(check, 500);
+      })
+    `);
+
+    const finalHtml = await hidden.webContents.executeJavaScript(`
+      (() => {
+        document.querySelectorAll('script[src]').forEach(s => s.remove());
+        return '<!DOCTYPE html>\\n' + document.documentElement.outerHTML;
+      })()
+    `);
+
+    const baseName = (filename || '合并文档').replace(/\.[^.]+$/, '');
     const { filePath, canceled } = await dialog.showSaveDialog({
       defaultPath: baseName + '.html',
       filters: [{ name: 'HTML', extensions: ['html'] }]
