@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { PDFDocument, PDFName, PDFArray, PDFDict, PDFHexString, PDFNull, PDFNumber } = require('pdf-lib');
-const { buildHtml, extractHeadings, buildDocx, extractMermaidBlocks, hasWideTable } = require('./converter');
+const { buildHtml, buildMergedHtml, extractHeadings, buildDocx, extractMermaidBlocks, hasWideTable } = require('./converter');
 const { Packer } = require('docx');
 const sharp = require('sharp');
 const { pathToFileURL } = require('url');
@@ -155,6 +155,19 @@ ipcMain.handle('reset-background', async () => {
   }
 });
 
+// 应用信息：版本 + 打包日期（水印自动显示最新版本的构建日期）
+ipcMain.handle('get-app-info', async () => {
+  let buildDate = '';
+  try {
+    // 打包后 app.getAppPath() 指向 app.asar，其修改时间即打包时间；开发态为源码目录
+    const mtime = fs.statSync(app.getAppPath()).mtime;
+    buildDate = '' + mtime.getFullYear() + String(mtime.getMonth() + 1).padStart(2, '0') + String(mtime.getDate()).padStart(2, '0');
+  } catch (e) {
+    buildDate = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  }
+  return { version: app.getVersion(), buildDate };
+});
+
 // 从 markdown 文件路径推导所在目录（用于解析相对图片路径）
 function basedirOf(srcPath) {
   try {
@@ -193,6 +206,11 @@ ipcMain.handle('read-md-file', async (_, filePath) => {
 // 预览：返回渲染好的 HTML 字符串
 ipcMain.handle('preview-md', async (_, { mdContent, srcPath }) => {
   return buildHtml(mdContent, basedirOf(srcPath));
+});
+
+// 预览：多个 markdown 合并为一个 HTML（顶部标签页 + 汇总目录）
+ipcMain.handle('preview-merge', async (_, { files }) => {
+  return buildMergedHtml(files || []);
 });
 
 // 转换：渲染 HTML → printToPDF → 添加书签 → 保存文件
@@ -482,6 +500,55 @@ ipcMain.handle('convert-html', async (event, { mdContent, filename, srcPath }) =
     `);
 
     const baseName = path.basename(filename, path.extname(filename));
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      defaultPath: baseName + '.html',
+      filters: [{ name: 'HTML', extensions: ['html'] }]
+    });
+
+    if (canceled || !filePath) return { success: false };
+
+    fs.writeFileSync(filePath, finalHtml, 'utf-8');
+    shell.openPath(filePath);
+    return { success: true, filePath };
+  } finally {
+    hidden.destroy();
+  }
+});
+
+// 导出：多个 markdown 合并后的 HTML（内联 mermaid SVG，离线可用）
+ipcMain.handle('convert-merge', async (event, { files, filename }) => {
+  const html = buildMergedHtml(files || []);
+
+  const hidden = new BrowserWindow({
+    show: false,
+    webPreferences: { offscreen: true }
+  });
+
+  try {
+    await loadHtmlIntoWindow(hidden, html);
+
+    await hidden.webContents.executeJavaScript(`
+      new Promise((resolve) => {
+        const check = () => {
+          const divs = document.querySelectorAll('.mermaid');
+          if (divs.length === 0 || Array.from(divs).every(d => d.querySelector('svg'))) {
+            resolve();
+          } else {
+            setTimeout(check, 200);
+          }
+        };
+        setTimeout(check, 500);
+      })
+    `);
+
+    const finalHtml = await hidden.webContents.executeJavaScript(`
+      (() => {
+        document.querySelectorAll('script[src]').forEach(s => s.remove());
+        return '<!DOCTYPE html>\\n' + document.documentElement.outerHTML;
+      })()
+    `);
+
+    const baseName = (filename || '合并文档').replace(/\.[^.]+$/, '');
     const { filePath, canceled } = await dialog.showSaveDialog({
       defaultPath: baseName + '.html',
       filters: [{ name: 'HTML', extensions: ['html'] }]

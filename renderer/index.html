@@ -9,7 +9,7 @@
   body {
     font-family: "Georgia", "Microsoft YaHei", serif;
     background: url('bg.webp') center/cover no-repeat fixed;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -51,20 +51,26 @@
   }
 
   .container {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 280px);
     gap: 28px;
-    align-items: stretch;
+    justify-content: center;
+    align-content: center;
+    padding: 56px 48px;
     transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
     position: relative;
     z-index: 1;
+    transform-origin: center center;
   }
   body.has-preview .container {
+    display: flex;
     flex-direction: column;
     gap: 12px;
     width: 160px;
     padding: 12px;
     height: 100vh;
     justify-content: center;
+    transform: none !important;
   }
 
   .card {
@@ -121,7 +127,7 @@
     content: '📖';
     position: absolute;
     top: -12px;
-    right: -10px;
+    left: -10px;
     font-size: 30px;
     opacity: 0.85;
     animation: float-book 3.5s ease-in-out infinite;
@@ -131,6 +137,21 @@
   @keyframes float-book {
     0%, 100% { transform: translateY(0) rotate(0deg); }
     50% { transform: translateY(-5px) rotate(5deg); }
+  }
+  .card-merge::before {
+    content: '🧩';
+    position: absolute;
+    bottom: -16px;
+    right: -16px;
+    font-size: 40px;
+    opacity: 0.85;
+    animation: float-merge 3.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  @keyframes float-merge {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-7px) rotate(-8deg); }
   }
   body.has-preview .card {
     width: 100%;
@@ -153,6 +174,7 @@
   .card-pdf .badge { background: linear-gradient(135deg, #ffe0d0, #ffc8b0); color: #a0402a; border: 1px solid rgba(180,80,40,0.15); }
   .card-html .badge { background: linear-gradient(135deg, #fff0d0, #ffe4a0); color: #7a5a1a; border: 1px solid rgba(160,120,40,0.15); }
   .card-word .badge { background: linear-gradient(135deg, #d0e8ff, #b8d8ff); color: #2a608a; border: 1px solid rgba(40,100,180,0.15); }
+  .card-merge .badge { background: linear-gradient(135deg, #e8d8ff, #d8c8ff); color: #5a3a8a; border: 1px solid rgba(120,80,180,0.15); }
 
   .drop-zone {
     border: none;
@@ -371,15 +393,16 @@
 
   /* ====== 竖屏模式 ====== */
   body.portrait .container {
-    flex-direction: column;
-    align-items: center;
+    grid-template-columns: 280px;
     gap: 20px;
+    padding: 48px;
   }
   body.portrait .card {
     width: 280px;
   }
   /* 竖屏时预览不缩卡片，预览面板叠加覆盖 */
   body.portrait.has-preview .container {
+    display: flex;
     width: auto;
     padding: 20px;
     height: auto;
@@ -419,6 +442,133 @@
     width: 100vw;
     z-index: 300;
   }
+
+  /* ====== 合并文件弹窗 ====== */
+  .merge-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    background: rgba(20, 12, 30, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .merge-overlay.open { display: flex; }
+  .merge-dialog {
+    width: 460px;
+    max-width: calc(100vw - 40px);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, #fdfaf2, #f7f0e2);
+    border-radius: 16px;
+    border: 1.5px solid rgba(180,130,60,0.5);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    padding: 18px;
+    color: #3b2a1a;
+  }
+  .merge-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #5a3a1a;
+    margin-bottom: 4px;
+  }
+  .merge-sub {
+    font-size: 11px;
+    color: #9a7a5a;
+    margin-bottom: 12px;
+  }
+  .merge-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    min-height: 60px;
+  }
+  .merge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(180,130,60,0.25);
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: grab;
+  }
+  .merge-idx {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #c08030;
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .merge-drag {
+    cursor: grab;
+    color: #9a7a5a;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .merge-drag:active { cursor: grabbing; }
+  .merge-row.dragging { opacity: 0.5; }
+  .merge-name {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    color: #3b2a1a;
+    outline: none;
+    padding: 4px 2px;
+    border-bottom: 1px dashed transparent;
+  }
+  .merge-name:focus { border-bottom-color: #c08030; }
+  .merge-del {
+    border: none;
+    background: none;
+    color: #9b3a2a;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0 4px;
+  }
+  .merge-del:hover { color: #6a2016; }
+  .merge-empty { text-align: center; color: #b09a80; font-size: 12px; padding: 18px 0; }
+  .merge-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .merge-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    transition: all 0.2s;
+  }
+  .merge-btn-add {
+    background: rgba(255,255,255,0.8);
+    color: #7a5a1a;
+    border: 1px solid rgba(180,130,60,0.4);
+    margin-right: auto;
+  }
+  .merge-btn-add:hover { background: #fff; }
+  .merge-btn-cancel { background: rgba(180,130,60,0.12); color: #6b4a2a; }
+  .merge-btn-cancel:hover { background: rgba(180,130,60,0.22); }
+  .merge-btn-confirm { background: linear-gradient(135deg, #c08030, #d4943a); color: #fff; box-shadow: 0 2px 8px rgba(160,100,30,0.3); }
+  .merge-btn-confirm:hover { background: linear-gradient(135deg, #a06820, #c08030); }
 
   /* ====== 水印 ====== */
   .watermark {
@@ -484,6 +634,19 @@
     </div>
     <div class="status hidden" id="statusWord"></div>
   </div>
+
+  <div class="card card-merge">
+    <div class="card-title">多文件合并 <span class="badge">合并</span></div>
+    <div class="drop-zone" id="dropZoneMerge">
+      <input type="file" id="fileInputMerge" accept=".md" multiple>
+      <div class="drop-icon">🗂️</div>
+      <div class="drop-text">
+        拖入或点击选择多个 .md 文件
+        <span>合并为一个 HTML 文件</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusMerge"></div>
+  </div>
 </div>
 
 <div class="preview-panel" id="previewPanel">
@@ -498,6 +661,19 @@
     </div>
   </div>
   <iframe class="preview-iframe" id="previewFrame"></iframe>
+</div>
+
+<div class="merge-overlay" id="mergeOverlay">
+  <div class="merge-dialog">
+    <div class="merge-title">合并文件列表</div>
+    <div class="merge-sub">编辑文件名、拖动行调整顺序（文件名会写入合并后的 HTML）</div>
+    <div class="merge-list" id="mergeList"></div>
+    <div class="merge-actions">
+      <button class="merge-btn merge-btn-add" id="mergeAddBtn">+ 添加文件</button>
+      <button class="merge-btn merge-btn-cancel" id="mergeCancelBtn">取消</button>
+      <button class="merge-btn merge-btn-confirm" id="mergeConfirmBtn">确认合并</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -629,6 +805,7 @@
   closeBtn.addEventListener('click', () => {
     previewPanel.classList.remove('open');
     document.body.classList.remove('has-preview');
+    fitContainer();
   });
 
   // 下载按钮 → 根据任务类型下载 PDF 或 HTML
@@ -680,6 +857,28 @@
         downloadBtn.disabled = false;
         downloadBtn.textContent = '下载 HTML';
       }
+    } else if (task.type === 'merge') {
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '生成中...';
+      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 HTML...');
+
+      try {
+        const result = await window.api.convertMerge(task.files, '合并文档');
+        if (result.success) {
+          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+          downloadBtn.textContent = '下载完成 ✓';
+          downloadBtn.disabled = false;
+          setTimeout(() => { downloadBtn.textContent = '下载合并 HTML'; }, 3000);
+        } else {
+          setStatus(task.statusEl, 'error', '已取消');
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = '下载合并 HTML';
+        }
+      } catch (err) {
+        setStatus(task.statusEl, 'error', err.message);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载合并 HTML';
+      }
     }
   });
 
@@ -701,6 +900,162 @@
     document.getElementById('statusWord'),
     handleWord
   );
+
+  // ====== 多文件合并（第 4 个上传入口） ======
+  const statusMerge = document.getElementById('statusMerge');
+  const mergeOverlay = document.getElementById('mergeOverlay');
+  const mergeListEl = document.getElementById('mergeList');
+  const mergeAddBtn = document.getElementById('mergeAddBtn');
+  const mergeCancelBtn = document.getElementById('mergeCancelBtn');
+  const mergeConfirmBtn = document.getElementById('mergeConfirmBtn');
+  const mergeFileInput = document.getElementById('fileInputMerge');
+
+  let mergeFiles = []; // { name, file, srcPath }
+
+  function renderMergeList() {
+    mergeListEl.innerHTML = '';
+    if (mergeFiles.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'merge-empty';
+      empty.textContent = '尚未添加文件';
+      mergeListEl.appendChild(empty);
+      return;
+    }
+    mergeFiles.forEach((item, i) => {
+      const row = document.createElement('div');
+      row.className = 'merge-row';
+      row.setAttribute('data-index', i);
+      row._item = item;
+
+      // 拖拽手柄：整行均可上下拖动排序，⠿ 为视觉提示
+      const handle = document.createElement('span');
+      handle.className = 'merge-drag';
+      handle.textContent = '⠿';
+      handle.title = '拖拽排序';
+
+      const idx = document.createElement('span');
+      idx.className = 'merge-idx';
+      idx.textContent = i + 1;
+
+      const input = document.createElement('input');
+      input.className = 'merge-name';
+      input.value = item.name;
+      input.addEventListener('input', () => { item.name = input.value; });
+
+      const del = document.createElement('button');
+      del.className = 'merge-del';
+      del.textContent = '×';
+      del.title = '移除';
+      del.addEventListener('click', () => { mergeFiles.splice(i, 1); renderMergeList(); });
+
+      row.append(handle, idx, input, del);
+      mergeListEl.appendChild(row);
+
+      attachMergeRowDrag(row);
+    });
+  }
+
+  // 用 mousedown + document 级 mousemove/mouseup 实现整行拖拽排序
+  // （不依赖指针捕获 / 原生 HTML5 拖拽，避免 Electron/file:// 下拖不动）
+  let mergeDrag = null; // { row, startY, moved }
+
+  function attachMergeRowDrag(row) {
+    row.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest('.merge-name') || e.target.closest('.merge-del')) return;
+      mergeDrag = { row, startY: e.clientY, moved: false };
+      row.classList.add('dragging');
+      e.preventDefault();
+    });
+  }
+
+  document.addEventListener('mousemove', (e) => {
+    if (!mergeDrag) return;
+    const dy = e.clientY - mergeDrag.startY;
+    if (!mergeDrag.moved && Math.abs(dy) < 6) return;
+    mergeDrag.moved = true;
+    const row = mergeDrag.row;
+    const rows = Array.from(mergeListEl.querySelectorAll('.merge-row'));
+    let target = null;
+    for (const r of rows) {
+      if (r === row) continue;
+      const rect = r.getBoundingClientRect();
+      if (e.clientY >= rect.top && e.clientY <= rect.bottom) { target = r; break; }
+    }
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    if (e.clientY < rect.top + rect.height / 2) {
+      mergeListEl.insertBefore(row, target);
+    } else {
+      mergeListEl.insertBefore(row, target.nextSibling);
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!mergeDrag) return;
+    const row = mergeDrag.row;
+    mergeDrag = null;
+    row.classList.remove('dragging');
+    mergeFiles = Array.from(mergeListEl.querySelectorAll('.merge-row')).map(r => r._item);
+    renderMergeList();
+  });
+
+  function openMergeDialog(incomingFiles) {
+    for (const f of incomingFiles) {
+      if (!f.name.toLowerCase().endsWith('.md')) continue;
+      mergeFiles.push({ name: f.name, file: f, srcPath: safeGetFilePath(f) });
+    }
+    renderMergeList();
+    mergeOverlay.classList.add('open');
+  }
+
+  // 合并入口的拖放区（支持多文件）
+  const dropZoneMerge = document.getElementById('dropZoneMerge');
+  dropZoneMerge.addEventListener('click', () => mergeFileInput.click());
+  mergeFileInput.addEventListener('change', () => {
+    if (mergeFileInput.files.length) openMergeDialog(Array.from(mergeFileInput.files));
+    mergeFileInput.value = '';
+  });
+  dropZoneMerge.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneMerge.classList.add('drag-over'); });
+  dropZoneMerge.addEventListener('dragleave', () => dropZoneMerge.classList.remove('drag-over'));
+  dropZoneMerge.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZoneMerge.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) openMergeDialog(Array.from(e.dataTransfer.files));
+  });
+
+  // 弹窗内「添加文件」复用同一个 input
+  mergeAddBtn.addEventListener('click', () => mergeFileInput.click());
+  mergeCancelBtn.addEventListener('click', () => { mergeFiles = []; mergeOverlay.classList.remove('open'); });
+
+  mergeConfirmBtn.addEventListener('click', async () => {
+    if (mergeFiles.length === 0) {
+      setStatus(statusMerge, 'error', '请先添加 .md 文件');
+      return;
+    }
+    // 同步弹窗里编辑后的名字，空名回退为原文件名
+    mergeFiles.forEach(item => { if (!item.name.trim()) item.name = item.file.name; });
+    setStatus(statusMerge, 'loading', '<div class="spinner"></div> 合并中...');
+    mergeOverlay.classList.remove('open');
+
+    try {
+      const files = [];
+      for (const item of mergeFiles) {
+        const content = await readFile(item.file);
+        files.push({ name: item.name.trim(), content, srcPath: item.srcPath });
+      }
+      const html = await window.api.previewMerge(files);
+      previewFrame.srcdoc = html;
+      previewFilename.textContent = '合并文档 (' + files.length + ' 个文件)';
+      downloadBtn.textContent = '下载合并 HTML';
+      previewPanel.classList.add('open');
+      document.body.classList.add('has-preview');
+      setStatus(statusMerge, 'success', '已合并 ' + files.length + ' 个文件，点击「下载合并 HTML」导出');
+      previewPanel._pendingTask = { type: 'merge', files, statusEl: statusMerge };
+    } catch (err) {
+      setStatus(statusMerge, 'error', err.message);
+    }
+  });
 
   // ====== 背景替换功能 ======
   const bgBtn = document.getElementById('bgBtn');
@@ -815,6 +1170,7 @@
       document.body.classList.remove('portrait');
     }
     updateLayoutBtnState();
+    fitContainer();
   }
 
   function updateLayoutBtnState() {
@@ -828,6 +1184,22 @@
     }
   }
 
+  // ====== 4 个入口整体缩放，确保 2×2 布局不超出窗口显示区域 ======
+  const cardsContainer = document.querySelector('.container');
+  function fitContainer() {
+    if (document.body.classList.contains('has-preview')) {
+      cardsContainer.style.transform = '';
+      return;
+    }
+    const availW = window.innerWidth;
+    const availH = window.innerHeight;
+    const natW = cardsContainer.offsetWidth;
+    const natH = cardsContainer.offsetHeight;
+    if (!natW || !natH) return;
+    const scale = Math.min(availW / natW, availH / natH, 1);
+    cardsContainer.style.transform = (scale < 1) ? 'scale(' + scale + ')' : '';
+  }
+
   // 自动检测
   function autoLayout() {
     if (layoutLocked) return;
@@ -838,7 +1210,7 @@
   let resizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(autoLayout, 150);
+    resizeTimer = setTimeout(() => { autoLayout(); fitContainer(); }, 150);
   });
 
   // 手动切换按钮
@@ -861,8 +1233,13 @@
   // 初始检测
   autoLayout();
 
-  // ====== 水印 ======
-  document.getElementById('watermark').textContent = 'MarkMorph by cmj @20260809';
+  // ====== 水印（自动显示最新版本的打包日期） ======
+  window.api.getAppInfo().then(info => {
+    const date = (info && info.buildDate) ? info.buildDate : '';
+    document.getElementById('watermark').textContent = 'MarkMorph by cmj @' + date;
+  }).catch(() => {
+    document.getElementById('watermark').textContent = 'MarkMorph by cmj';
+  });
 
   // ====== 文件关联自动打开：双击 .md → 直接进入「转 HTML」预览 ======
   const statusHtml = document.getElementById('statusHtml');
