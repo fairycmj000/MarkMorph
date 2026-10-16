@@ -52,7 +52,7 @@
 
   .container {
     display: grid;
-    grid-template-columns: repeat(2, 280px);
+    grid-template-columns: repeat(3, 280px);
     gap: 28px;
     justify-content: center;
     align-content: center;
@@ -483,7 +483,7 @@
 
   /* ====== 竖屏模式 ====== */
   body.portrait .container {
-    grid-template-columns: 280px;
+    grid-template-columns: repeat(2, 280px);
     gap: 20px;
     padding: 48px;
   }
@@ -951,19 +951,6 @@
     <div class="status hidden" id="statusWord"></div>
   </div>
 
-  <div class="card card-merge">
-    <div class="card-title">多文件 <span class="badge">分屏</span></div>
-    <div class="drop-zone" id="dropZoneMerge">
-      <input type="file" id="fileInputMerge" accept=".md" multiple>
-      <div class="drop-icon">🗂️</div>
-      <div class="drop-text">
-        拖入或点击选择多个 .md 文件
-        <span>分屏预览并合并导出</span>
-      </div>
-    </div>
-    <div class="status hidden" id="statusMerge"></div>
-  </div>
-
   <div class="card card-docx">
     <div class="card-title">Word → MD <span class="badge">MD</span></div>
     <div class="drop-zone" id="dropZoneDocx">
@@ -988,6 +975,19 @@
       </div>
     </div>
     <div class="status hidden" id="statusDocxHtml"></div>
+  </div>
+
+  <div class="card card-merge">
+    <div class="card-title">多文件 <span class="badge">分屏</span></div>
+    <div class="drop-zone" id="dropZoneMerge">
+      <input type="file" id="fileInputMerge" accept=".md" multiple>
+      <div class="drop-icon">🗂️</div>
+      <div class="drop-text">
+        拖入或点击选择多个 .md 文件
+        <span>分屏预览并合并导出</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusMerge"></div>
   </div>
 </div>
 
@@ -2560,7 +2560,7 @@
     }
   }
 
-  // ====== 4 个入口整体缩放，确保 2×2 布局不超出窗口显示区域 ======
+  // ====== 入口卡片整体缩放，确保布局不超出窗口显示区域 ======
   const cardsContainer = document.querySelector('.container');
   function fitContainer() {
     if (document.body.classList.contains('has-preview')) {
