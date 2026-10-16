@@ -203,6 +203,18 @@ ipcMain.handle('read-md-file', async (_, filePath) => {
   }
 });
 
+// 预览内编辑保存：把 markdown 内容写回源文件
+ipcMain.handle('write-md-file', async (_, { filePath, content }) => {
+  try {
+    if (!filePath || typeof filePath !== 'string') return { success: false, error: 'no-path' };
+    if (typeof content !== 'string') return { success: false, error: 'no-content' };
+    fs.writeFileSync(filePath, content, 'utf-8');
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+});
+
 // ====== 文件实时同步：监听正在预览的 .md 文件，外部编辑保存后通知渲染层刷新 ======
 const watchedFiles = new Map(); // filePath -> dirPath
 const dirWatchers = new Map();  // dirPath -> { watcher, files:Set<basename> }
@@ -629,6 +641,110 @@ ipcMain.handle('convert-merge', async (event, { files, filename }) => {
     return { success: true, filePath };
   } finally {
     hidden.destroy();
+  }
+});
+
+// 多文件合并为单一 markdown：每个文件按自身目录解析相对图片，再按顺序自上而下拼接
+function mergeMarkdown(files) {
+  return (files || []).map(f => {
+    const content = f.content || '';
+    const basedir = f.srcPath ? path.dirname(f.srcPath) : '';
+    // 相对图片路径 → 绝对 file:// URL，避免拼接后因所在目录不同而失效
+    return content.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (whole, alt, href) => {
+      if (/^(https?:|data:|file:)/i.test(href) || path.isAbsolute(href)) return whole;
+      return `![${alt}](${pathToFileURL(path.resolve(basedir, href)).href})`;
+    });
+  }).join('\n\n---\n\n');
+}
+
+// 导出：多个 markdown 自上而下合并为 PDF
+ipcMain.handle('convert-merge-pdf', async (event, { files, filename }) => {
+  const mergedMd = mergeMarkdown(files);
+  const html = buildHtml(mergedMd, '');
+  const headings = extractHeadings(mergedMd);
+
+  const hidden = new BrowserWindow({
+    show: false,
+    webPreferences: { offscreen: true }
+  });
+
+  try {
+    await loadHtmlIntoWindow(hidden, html);
+
+    await hidden.webContents.executeJavaScript(`
+      new Promise((resolve) => {
+        const check = () => {
+          const divs = document.querySelectorAll('.mermaid');
+          if (divs.length === 0 || Array.from(divs).every(d => d.querySelector('svg'))) {
+            resolve();
+          } else {
+            setTimeout(check, 200);
+          }
+        };
+        setTimeout(check, 500);
+      })
+    `);
+
+    const headingData = await hidden.webContents.executeJavaScript(`
+      (() => {
+        const hs = document.querySelectorAll('#main h1, #main h2, #main h3, #main h4, #main h5, #main h6');
+        return {
+          totalHeight: document.documentElement.scrollHeight,
+          headings: Array.from(hs).map(h => ({
+            top: h.getBoundingClientRect().top + window.scrollY,
+            level: parseInt(h.tagName.substring(1)),
+            text: h.textContent
+          }))
+        };
+      })()
+    `);
+
+    const pdfBuffer = await hidden.webContents.printToPDF({
+      pageSize: hasWideTable(mergedMd) ? 'A3' : 'A4',
+      marginType: 'default',
+      printBackground: true
+    });
+
+    const pdfWithBookmarks = await addBookmarks(pdfBuffer, headingData.headings, headingData.totalHeight);
+
+    const baseName = (filename || '合并文档').replace(/\.[^.]+$/, '');
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      defaultPath: baseName + '.pdf',
+      filters: [{ name: 'PDF', extensions: ['pdf'] }]
+    });
+
+    if (canceled || !filePath) return { success: false };
+
+    fs.writeFileSync(filePath, pdfWithBookmarks);
+    shell.openPath(filePath);
+    return { success: true, filePath };
+  } finally {
+    hidden.destroy();
+  }
+});
+
+// 导出：多个 markdown 自上而下合并为 Word
+ipcMain.handle('convert-merge-word', async (event, { files, filename }) => {
+  try {
+    const mergedMd = mergeMarkdown(files);
+    const mermaidImages = await renderMermaidToPngs(mergedMd);
+    const doc = buildDocx(mergedMd, mermaidImages, '');
+
+    const baseName = (filename || '合并文档').replace(/\.[^.]+$/, '');
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      defaultPath: baseName + '.docx',
+      filters: [{ name: 'Word', extensions: ['docx'] }]
+    });
+
+    if (canceled || !filePath) return { success: false };
+
+    const buffer = await Packer.toBuffer(doc);
+    fs.writeFileSync(filePath, buffer);
+    shell.openPath(filePath);
+    return { success: true, filePath };
+  } catch (error) {
+    safeLog('convert-merge-word error:', error);
+    throw error;
   }
 });
 

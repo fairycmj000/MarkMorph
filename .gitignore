@@ -3,3 +3,6 @@ node_modules/
 
 # 构建产物（安装包在 安装包/ 目录，走 Git LFS，不忽略）
 dist/
+
+# Playwright 测试临时产物
+.playwright-mcp/

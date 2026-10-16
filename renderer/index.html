@@ -272,6 +272,108 @@
   .btn-download:disabled { background: linear-gradient(135deg, #d4b882, #e0c892); cursor: not-allowed; box-shadow: none; }
   .preview-actions { display: flex; align-items: center; gap: 10px; }
   .preview-iframe { flex: 1; border: none; width: 100%; }
+  [hidden] { display: none !important; }
+
+  /* ====== 预览主体：单文件 iframe / 编辑框 / 多文件分屏 ====== */
+  .preview-body { flex: 1; display: flex; position: relative; overflow: hidden; min-height: 0; }
+  .preview-editor {
+    flex: 1; border: none; width: 100%; resize: none; outline: none;
+    padding: 16px; font-family: Consolas, "Microsoft YaHei", monospace;
+    font-size: 13px; line-height: 1.6; background: #fffef8; color: #333;
+    white-space: pre; overflow: auto;
+  }
+  .preview-grid { flex: 1; display: flex; flex-direction: row; gap: 8px; padding: 8px; min-height: 0; width: 100%; overflow: hidden; }
+  .preview-grid.two-rows { flex-direction: column; }
+  .grid-row { flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .row-divider { flex: 0 0 8px; cursor: row-resize; border-radius: 4px; background: transparent; transition: background 0.15s; }
+  .row-divider:hover, .row-divider.dragging { background: rgba(192,128,48,0.45); }
+  .pane {
+    flex: 1 1 0; min-width: 0; display: flex; flex-direction: column;
+    border: 2px solid rgba(180,130,60,0.15); border-radius: 6px;
+    background: #fff; overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .pane:hover { border-color: #c08030; box-shadow: 0 0 0 2px rgba(192,128,48,0.3); }
+  .pane.dragging { opacity: 0.5; }
+  .pane-header {
+    display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    padding: 6px 10px; cursor: grab; user-select: none;
+    background: linear-gradient(90deg, #f8f0e0, #fdf8f0);
+    border-bottom: 1px solid rgba(180,130,60,0.15);
+  }
+  .pane-name {
+    flex: 1; font-size: 12px; font-weight: 600; color: #5a3a1a;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pane-btn {
+    border: none; background: rgba(180,130,60,0.12); color: #6b4a2a;
+    border-radius: 5px; padding: 3px 10px; font-size: 11px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .pane-btn:hover { background: rgba(180,130,60,0.25); }
+  .pane-close { background: none; color: #9b3a2a; font-size: 16px; line-height: 1; padding: 0 6px; }
+  .pane-close:hover { color: #6a2016; background: none; }
+  .pane-body { flex: 1; display: flex; position: relative; min-height: 0; }
+  .pane-iframe { flex: 1; border: none; width: 100%; height: 100%; }
+  .pane-editor {
+    flex: 1; border: none; width: 100%; resize: none; outline: none;
+    padding: 14px; font-family: Consolas, "Microsoft YaHei", monospace;
+    font-size: 13px; line-height: 1.6; background: #fffef8; color: #333;
+    white-space: pre; overflow: auto;
+  }
+
+  /* ====== 预览面板工具按钮 ====== */
+  .btn-tool {
+    background: rgba(180,130,60,0.12); color: #6b4a2a; border: 1px solid rgba(180,130,60,0.25);
+    border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; font-weight: 600;
+    transition: background 0.2s;
+  }
+  .btn-tool:hover { background: rgba(180,130,60,0.22); }
+  .btn-icon {
+    background: none; border: none; cursor: pointer; font-size: 18px; line-height: 1;
+    color: #9a7a5a; padding: 2px 4px;
+  }
+  .btn-icon:hover { color: #4a2c17; }
+  .zoom-group { display: inline-flex; align-items: center; gap: 4px; }
+  .btn-zoom { padding: 6px 9px; font-size: 14px; font-weight: 700; min-width: 30px; }
+  .zoom-level { min-width: 46px; text-align: center; font-size: 12px; color: #8b6a3a; font-variant-numeric: tabular-nums; }
+  .preview-panel.dark .zoom-level { color: #a0a0a0; }
+
+  /* 全屏：预览面板覆盖整屏，隐藏上传入口 */
+  .preview-panel.fullscreen { width: 100vw; }
+  body.preview-fullscreen .btn-bg,
+  body.preview-fullscreen .btn-help,
+  body.preview-fullscreen .btn-layout,
+  body.preview-fullscreen .watermark { display: none; }
+
+  /* ====== 预览面板黑暗风格 ====== */
+  .preview-panel.dark { background: linear-gradient(180deg, #202124 0%, #1a1b1e 100%); border-left-color: rgba(255,255,255,0.08); }
+  .preview-panel.dark .preview-header { background: linear-gradient(90deg, #2a2b2e, #202124); border-bottom-color: rgba(255,255,255,0.08); }
+  .preview-panel.dark .preview-title { color: #e6e6e6; }
+  .preview-panel.dark .preview-filename { color: #a0a0a0; }
+  .preview-panel.dark .btn-close { color: #a0a0a0; }
+  .preview-panel.dark .btn-close:hover { color: #fff; }
+  .preview-panel.dark .btn-icon { color: #a0a0a0; }
+  .preview-panel.dark .btn-icon:hover { color: #fff; }
+  .preview-panel.dark .btn-tool { background: rgba(255,255,255,0.08); color: #c0c0c0; border-color: rgba(255,255,255,0.15); }
+  .preview-panel.dark .btn-tool:hover { background: rgba(255,255,255,0.16); }
+  .preview-panel.dark .preview-editor, .preview-panel.dark .pane-editor { background: #1e1e1e; color: #d4d4d4; }
+  .preview-panel.dark .pane { background: #26272a; border-color: rgba(255,255,255,0.12); }
+  .preview-panel.dark .pane:hover { border-color: #d4943a; box-shadow: 0 0 0 2px rgba(212,148,58,0.4); }
+  .preview-panel.dark .pane-header { background: linear-gradient(90deg, #2a2b2e, #202124); border-bottom-color: rgba(255,255,255,0.08); }
+  .preview-panel.dark .pane-name { color: #e6e6e6; }
+  .preview-panel.dark .pane-btn { background: rgba(255,255,255,0.08); color: #c0c0c0; }
+  .preview-panel.dark .pane-btn:hover { background: rgba(255,255,255,0.16); }
+  .preview-panel.dark .pane-close { color: #e08080; }
+  .preview-panel.dark .pane-close:hover { color: #ff9a9a; }
+
+  /* ====== 合并弹窗：复选框 ====== */
+  .merge-check { flex-shrink: 0; cursor: pointer; transform: scale(1.1); }
+  .merge-label { flex: 1; font-size: 13px; color: #3b2a1a; cursor: default; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .merge-row { cursor: grab; }
+  .merge-format { display: flex; gap: 18px; margin-bottom: 12px; font-size: 12px; color: #5a3a1a; }
+  .merge-format label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+  .merge-format input { cursor: pointer; }
 
   .btn-bg {
     position: fixed;
@@ -701,21 +803,30 @@
       <button class="help-close" id="helpClose" title="关闭">×</button>
     </div>
     <div class="help-body">
-      <h2>最新更新（v1.0.15）</h2>
-      <h3>新功能</h3>
+      <h2>最新更新</h2>
+      <h3>v1.0.16</h3>
       <ul>
-        <li><b>多文件合并导出</b>：多个 Markdown 合并为一个 HTML（顶部标签页 + 汇总目录 + 阅读进度条），顺序可拖拽调整、可重命名</li>
-        <li><b>直接打开 .md 文件</b>：双击 .md 文件直接用 MarkMorph 以 HTML 格式预览，并可下载保存为 .html</li>
-        <li><b>预览实时同步</b>：预览时监听源文件，外部编辑保存后自动刷新</li>
+        <li><b>缩放按钮移到「编辑」同行</b>：缩放 / 重置按钮与「编辑」按钮同一行，中间显示当前比例（50%–300%，步进 10%）</li>
+        <li><b>编辑支持「取消」</b>：编辑后可点「取消」放弃本次修改、不提交；分屏编辑同样支持独立取消</li>
+        <li><b>多文件布局切换</b>：新增「布局」按钮，在一行 8 格 ↔ 上下两行各 4 格间切换；两行布局下可<b>上下拖动分隔线</b>调整高度</li>
+        <li><b>图片 / 流程图单独下载</b>：全屏放大查看时点底部「下载」按钮，单独下载当前图片（原格式）或流程图（.svg）</li>
       </ul>
-      <h3>功能增强</h3>
+      <h3>v1.0.15</h3>
+      <h4>新功能</h4>
+      <ul>
+        <li><b>多文件分屏预览 + 合并下载</b>：多个 Markdown 并列分屏预览，可编辑保存；合并下载支持 HTML / PDF / Word</li>
+        <li><b>预览内编辑并保存</b>：单文件与多文件分屏均可在预览内编辑并保存回源 .md 文件</li>
+        <li><b>外部编辑冲突提示</b>：预览期间源文件被其他程序修改时弹出提示，未保存的本地编辑不提交、自动回退只读</li>
+        <li><b>明亮 / 黑暗主题 + 全屏</b>：预览面板支持 🌙/☀️ 主题切换与全屏模式（全屏隐藏上传入口）</li>
+      </ul>
+      <h4>功能增强</h4>
       <ul>
         <li>首页四个入口改为 <b>2×2 自适应布局</b>，随窗口大小自动缩放</li>
         <li>HTML 查看 <b>导航栏优化</b>：折叠 / 展开、拖动调整宽度、目录自动高亮跟随</li>
         <li>新增 <b>仅内容区域缩放</b>（50%–300%），左侧导航栏保持不变</li>
         <li>图片 / 流程图支持 <b>单独放大查看</b>（滚轮缩放、拖动平移）</li>
       </ul>
-      <h3>BUG 修复</h3>
+      <h4>BUG 修复</h4>
       <p>本版本无 BUG 修复。</p>
 
       <h2>一、快速上手</h2>
@@ -724,7 +835,7 @@
         <li><b>MD → PDF</b>：先预览排版，再下载 PDF（自动生成书签目录）</li>
         <li><b>MD → HTML</b>：转换为网页并自动在浏览器中打开</li>
         <li><b>MD → Word</b>：转换为 <code>.docx</code>，可用 Word / WPS 继续编辑</li>
-        <li><b>多文件合并</b>：多个 <code>.md</code> 合并为一个 HTML</li>
+        <li><b>多文件</b>：多个 <code>.md</code> 分屏并列预览，可编辑保存，并合并下载为 HTML / PDF / Word</li>
       </ul>
       <p>每个入口都支持两种选文件方式：把 <code>.md</code> 文件<b>拖入</b>对应区域，或<b>点击</b>该区域后在弹窗中选择文件。</p>
 
@@ -732,18 +843,21 @@
       <p>安装并完成文件关联后，<b>双击 <code>.md</code> 文件</b>（或右键 → 打开方式 → MarkMorph）：</p>
       <ul>
         <li>自动启动 MarkMorph，并直接以 <b>HTML 格式预览</b>该文件</li>
+        <li>双击打开默认进入<b>全屏预览</b>（隐藏首页入口），点 ⛶ 退出全屏</li>
         <li>预览面板顶部按钮变为「下载 HTML」，点击即可保存为 <code>.html</code></li>
         <li>若已运行，再次双击会把内容加载到当前窗口</li>
       </ul>
 
-      <h2>三、多文件合并导出</h2>
-      <p>把多个 Markdown 合并为<b>一个</b> HTML 文档：</p>
+      <h2>三、多文件（分屏预览 + 合并下载）</h2>
+      <p>把多个 Markdown 一次性打开，<b>分屏并列预览</b>，并可<b>合并下载</b>为一个文档：</p>
       <ul>
-        <li>把多个 <code>.md</code> 文件拖入「多文件合并」入口</li>
-        <li>在合并列表中：<b>拖拽整行</b>调整顺序、点击文件名<b>重命名</b>、点击 ✕ 移除</li>
-        <li>点击「生成合并 HTML」选择保存位置</li>
+        <li>把多个 <code>.md</code> 文件拖入「多文件」入口（最多 8 个），自动进入<b>全屏分屏预览</b></li>
+        <li>每个分屏都可<b>编辑并保存 / 取消</b>回源文件；<b>拖动分屏标题</b>调整顺序，点分屏右上角 ✕ 关闭</li>
+        <li>点顶部「布局」按钮，在<b>一行 8 格</b>与<b>上下两行各 4 格</b>间切换；两行布局下可<b>上下拖动分隔线</b>调整高度</li>
+        <li>点右上角「合并下载」：<b>勾选</b>要合并的文件、<b>拖动排序</b>、<b>双击文件名重命名</b>，再选择格式（HTML / PDF / Word）</li>
+        <li>预览中可点「+ 添加文件」继续追加 .md 文件（不超过 8 个）</li>
       </ul>
-      <p>生成的 HTML 顶部为<b>标签页</b>（切换文档）、侧边为<b>汇总目录</b>，并带顶部<b>阅读进度条</b>。</p>
+      <p>合并为 <b>HTML</b> 时生成顶部标签页 + 汇总目录 + 阅读进度条；合并为 <b>PDF / Word</b> 时按指定顺序<b>从上到下</b>拼接内容。</p>
 
       <h2>四、预览面板常用操作</h2>
       <h3>目录导航栏</h3>
@@ -755,15 +869,24 @@
       </ul>
       <h3>仅内容区域缩放</h3>
       <ul>
-        <li>点击预览面板顶部的 <b>+ / −</b> 缩放正文，范围 50%–300%</li>
+        <li>点击预览面板顶部<b>「编辑」同行的 − / +</b> 缩放正文，范围 50%–300%，中间显示当前比例</li>
         <li>缩放只作用于<b>正文内容区</b>，左侧导航栏不变</li>
         <li>点击<b>重置</b>恢复 100%</li>
       </ul>
-      <h3>图片单独放大查看</h3>
+      <h3>图片 / 流程图单独放大查看与下载</h3>
       <ul>
         <li><b>点击</b>正文中的图片（或流程图）可全屏放大查看</li>
         <li>支持鼠标<b>滚轮缩放</b>、按住<b>拖动平移</b>、底部 +/−/重置</li>
+        <li>点底部<b>「下载」</b>按钮，可单独下载当前图片（原格式）或流程图（.svg）</li>
         <li>点击空白处、按 <b>Esc</b> 或右上角 × 关闭</li>
+      </ul>
+      <h3>编辑保存 / 取消 / 主题 / 全屏</h3>
+      <ul>
+        <li>预览面板顶部 <b>「编辑」</b>：把当前预览切换为文本编辑框，可直接修改内容；编辑后点 <b>「保存」</b> 写回源 .md 文件，点 <b>「取消」</b> 放弃本次修改、不提交</li>
+        <li>分屏预览时每个分屏可<b>独立编辑保存 / 取消</b>；拖动分屏标题调整顺序，点分屏右上角 ✕ 关闭该文件</li>
+        <li>编辑时可<b>插入图片</b>：直接<b>粘贴</b>剪贴板图片，或点 <b>「插入图片」</b>（分屏为「插图」）从本地选择<b>一张或多张</b>图片，以 base64 内联写入，PDF / HTML / Word 均可显示</li>
+        <li>若预览期间源文件被<b>其他程序</b>编辑保存，会弹出提示，当前窗口未保存的编辑<b>不提交</b>、自动回退只读</li>
+        <li><b>🌙/☀️</b> 切换预览明亮 / 黑暗主题；<b>⛶</b> 切换全屏（隐藏首页上传入口，退出后恢复）</li>
       </ul>
 
       <h2>五、更换背景</h2>
@@ -848,13 +971,13 @@
   </div>
 
   <div class="card card-merge">
-    <div class="card-title">多文件合并 <span class="badge">合并</span></div>
+    <div class="card-title">多文件 <span class="badge">分屏</span></div>
     <div class="drop-zone" id="dropZoneMerge">
       <input type="file" id="fileInputMerge" accept=".md" multiple>
       <div class="drop-icon">🗂️</div>
       <div class="drop-text">
         拖入或点击选择多个 .md 文件
-        <span>合并为一个 HTML 文件</span>
+        <span>分屏预览并合并导出</span>
       </div>
     </div>
     <div class="status hidden" id="statusMerge"></div>
@@ -868,22 +991,47 @@
       <span class="preview-filename" id="previewFilename"></span>
     </div>
     <div class="preview-actions">
+      <button class="btn-tool" id="editBtn" title="编辑源文件">编辑</button>
+      <button class="btn-tool" id="cancelEditBtn" title="放弃编辑，不保存" hidden>取消</button>
+      <span class="zoom-group" id="zoomGroup">
+        <button class="btn-tool btn-zoom" id="zoomOutBtn" title="缩小内容" aria-label="缩小">−</button>
+        <span class="zoom-level" id="zoomLevel">100%</span>
+        <button class="btn-tool btn-zoom" id="zoomInBtn" title="放大内容" aria-label="放大">+</button>
+        <button class="btn-tool btn-zoom" id="zoomResetBtn" title="重置缩放">重置</button>
+      </span>
+      <button class="btn-tool" id="insertImageBtn" title="插入图片（粘贴或选择本地文件）" hidden>插入图片</button>
       <button class="btn-download" id="downloadBtn">下载 PDF</button>
+      <button class="btn-tool" id="addFileBtn" title="添加文件（最多 8 个）">+ 添加文件</button>
+      <button class="btn-download" id="mergeDownloadBtn" title="合并下载">合并下载</button>
+      <button class="btn-tool" id="gridLayoutBtn" title="切换分屏布局" hidden>布局：1×8</button>
+      <button class="btn-icon" id="fullscreenBtn" title="全屏（隐藏上传入口）">⛶</button>
+      <button class="btn-icon" id="themeBtn" title="切换明亮/黑暗风格">🌙</button>
       <button class="btn-close" id="closeBtn">×</button>
     </div>
   </div>
-  <iframe class="preview-iframe" id="previewFrame"></iframe>
+  <div class="preview-body">
+    <iframe class="preview-iframe" id="previewFrame"></iframe>
+    <textarea class="preview-editor" id="previewEditor" spellcheck="false" hidden></textarea>
+    <div class="preview-grid" id="previewGrid" hidden></div>
+  </div>
 </div>
+
+<input type="file" id="addFileInput" accept=".md" multiple hidden>
+<input type="file" id="imageInput" accept="image/*" multiple hidden>
 
 <div class="merge-overlay" id="mergeOverlay">
   <div class="merge-dialog">
-    <div class="merge-title">合并文件列表</div>
-    <div class="merge-sub">编辑文件名、拖动行调整顺序（文件名会写入合并后的 HTML）</div>
+    <div class="merge-title">选择要合并的文件</div>
+    <div class="merge-sub">勾选 = 参与合并 · 拖动调整顺序 · 双击文件名重命名</div>
+    <div class="merge-format">
+      <label><input type="radio" name="mergeFormat" value="html" checked> HTML</label>
+      <label><input type="radio" name="mergeFormat" value="pdf"> PDF</label>
+      <label><input type="radio" name="mergeFormat" value="word"> Word</label>
+    </div>
     <div class="merge-list" id="mergeList"></div>
     <div class="merge-actions">
-      <button class="merge-btn merge-btn-add" id="mergeAddBtn">+ 添加文件</button>
       <button class="merge-btn merge-btn-cancel" id="mergeCancelBtn">取消</button>
-      <button class="merge-btn merge-btn-confirm" id="mergeConfirmBtn">确认合并</button>
+      <button class="merge-btn merge-btn-confirm" id="mergeConfirmBtn">合并下载</button>
     </div>
   </div>
 </div>
@@ -898,6 +1046,22 @@
   const previewFilename = document.getElementById('previewFilename');
   const closeBtn = document.getElementById('closeBtn');
   const downloadBtn = document.getElementById('downloadBtn');
+  const editBtn = document.getElementById('editBtn');
+  const insertImageBtn = document.getElementById('insertImageBtn');
+  const addFileBtn = document.getElementById('addFileBtn');
+  const mergeDownloadBtn = document.getElementById('mergeDownloadBtn');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const themeBtn = document.getElementById('themeBtn');
+  const previewEditor = document.getElementById('previewEditor');
+  const previewGrid = document.getElementById('previewGrid');
+  const addFileInput = document.getElementById('addFileInput');
+  const imageInput = document.getElementById('imageInput');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const zoomResetBtn = document.getElementById('zoomResetBtn');
+  const zoomLevel = document.getElementById('zoomLevel');
+  const gridLayoutBtn = document.getElementById('gridLayoutBtn');
 
   function setStatus(el, type, html) {
     el.className = 'status ' + type;
@@ -937,7 +1101,8 @@
     try {
       const srcPath = safeGetFilePath(file);
       const html = await window.api.previewMd(content, srcPath);
-      previewFrame.srcdoc = html;
+      setPreviewMode('single');
+      loadFrame(previewFrame, html);
       previewFilename.textContent = file.name;
       downloadBtn.textContent = '下载 PDF';
       previewPanel.classList.add('open');
@@ -963,7 +1128,8 @@
     try {
       const srcPath = safeGetFilePath(file);
       const html = await window.api.previewMd(content, srcPath);
-      previewFrame.srcdoc = html;
+      setPreviewMode('single');
+      loadFrame(previewFrame, html);
       previewFilename.textContent = file.name;
       downloadBtn.textContent = '下载 HTML';
       previewPanel.classList.add('open');
@@ -1015,13 +1181,302 @@
     return (file && file.path) || '';
   }
 
+  // ====== 预览编辑、多文件分屏、主题、全屏（通用） ======
+  const MAX_MULTI = 8;
+
+  let singleEditing = false;   // 单文件预览是否处于编辑态
+  let dark = false;            // 预览面板黑暗风格
+  let selfSave = { path: '', at: 0 }; // 最近一次自己写文件，用于跳过紧随其后的自动同步
+  let zoomPct = 100;            // 预览正文缩放百分比（头部「编辑」同行的 − / + / 重置）
+
+  // 注入到 iframe 文档内的黑暗风格覆盖样式
+  const DARK_THEME_CSS = `
+    html, body { background: #1e1e1e !important; color: #d4d4d4 !important; }
+    #main, #content, .doc-body, .doc-content, .markdown-body { background: #1e1e1e !important; }
+    h1, h2, h3, h4, h5, h6 { color: #e6e6e6 !important; }
+    p, li, td, th { color: #d4d4d4 !important; }
+    strong, b { color: #ffffff !important; }
+    a { color: #6cb2ff !important; }
+    blockquote { border-left-color: #555 !important; color: #b0b0b0 !important; background: rgba(255,255,255,0.03) !important; }
+    table { border-color: #444 !important; }
+    th { background: #333 !important; }
+    td { background: #262626 !important; }
+    tr:nth-child(even) td { background: #2a2a2a !important; }
+    pre, code { background: #2d2d2d !important; color: #e6e6e6 !important; }
+    hr { border-color: #444 !important; }
+    #sidebar, #sidebar-header, #toc-wrapper { background: #252526 !important; }
+    #sidebar h2 { color: #e6e6e6 !important; }
+    #progress-text, #zoom-level { color: #8b949e !important; }
+    #toc a, #toc .toc-file, #toc .toc-sub a { color: #b0b0b0 !important; }
+    #toc a:hover, #toc .toc-sub a:hover, #toc .toc-file:hover { background: #333 !important; color: #6cb2ff !important; }
+    #toc a.active, #toc .toc-sub a.active { background: #1f3a5f !important; color: #6cb2ff !important; }
+    #toc .lvl-1 { color: #e6e6e6 !important; }
+    #toc .lvl-2 { color: #d4d4d4 !important; }
+    #toc .lvl-3, #toc .lvl-4 { color: #a0a0a0 !important; }
+    #tab-bar, #topbar { background: #252526 !important; }
+    .tab { background: #2d2d2d !important; color: #b0b0b0 !important; border-color: #444 !important; }
+    .tab:hover { border-color: #6cb2ff !important; }
+    .tab.active { background: #0366d6 !important; color: #fff !important; border-color: #0366d6 !important; }
+    .doc-file-title { color: #6cb2ff !important; }
+    #zoom-toolbar { background: rgba(40,40,40,0.96) !important; }
+    #zoom-toolbar button, #collapse-btn, #expand-btn { background: transparent !important; color: #b0b0b0 !important; }
+    #zoom-toolbar button:hover, #collapse-btn:hover, #expand-btn:hover { background: #333 !important; color: #6cb2ff !important; }
+  `;
+
+  // 切换预览模式：single（单文件） / multi（多文件分屏）
+  function setPreviewMode(mode) {
+    const multi = (mode === 'multi');
+    editBtn.hidden = multi;
+    cancelEditBtn.hidden = true;
+    downloadBtn.hidden = multi;
+    addFileBtn.hidden = !multi;
+    mergeDownloadBtn.hidden = !multi;
+    gridLayoutBtn.hidden = !multi;
+    previewFrame.hidden = multi;
+    previewGrid.hidden = !multi;
+    previewEditor.hidden = true;   // 切换模式时退出编辑态
+    singleEditing = false;
+    editBtn.textContent = '编辑';
+    insertImageBtn.hidden = true;
+    zoomPct = 100;
+    zoomLevel.textContent = '100%';
+    gridTwoRows = false;
+    updateGridLayoutBtn();
+  }
+
+  // 加载 iframe 内容并套用当前主题（iframe 异步加载，需在 load 后注入）
+  function loadFrame(iframe, html) {
+    iframe.addEventListener('load', () => {
+      applyContentTheme(iframe, dark);
+      try { iframe.contentWindow.postMessage({ type: 'mm-zoom-set', pct: zoomPct }, '*'); } catch (e) {}
+    });
+    iframe.srcdoc = html;
+  }
+
+  function applyContentTheme(iframe, isDark) {
+    try {
+      const doc = iframe.contentDocument;
+      if (!doc || !doc.head) return;
+      let style = doc.getElementById('mm-dark-theme');
+      if (isDark) {
+        if (!style) {
+          style = doc.createElement('style');
+          style.id = 'mm-dark-theme';
+          style.textContent = DARK_THEME_CSS;
+          doc.head.appendChild(style);
+        }
+      } else if (style) {
+        style.remove();
+      }
+    } catch (e) {}
+  }
+
+  // 把当前主题应用到单文件 iframe 与所有分屏 iframe
+  function applyAllTheme() {
+    applyContentTheme(previewFrame, dark);
+    previewGrid.querySelectorAll('.pane-iframe').forEach(f => applyContentTheme(f, dark));
+  }
+
+  function enterFullscreen() {
+    previewPanel.classList.add('fullscreen');
+    document.body.classList.add('preview-fullscreen');
+    fullscreenBtn.textContent = '🗗';
+    fullscreenBtn.title = '退出全屏（显示上传入口）';
+  }
+  function exitFullscreen() {
+    previewPanel.classList.remove('fullscreen');
+    document.body.classList.remove('preview-fullscreen');
+    fullscreenBtn.textContent = '⛶';
+    fullscreenBtn.title = '全屏（隐藏上传入口）';
+  }
+
+  // 关闭预览：重置一切状态
+  function closePreview() {
+    previewPanel.classList.remove('open');
+    previewPanel.classList.remove('fullscreen');
+    document.body.classList.remove('has-preview');
+    document.body.classList.remove('preview-fullscreen');
+    singleEditing = false;
+    editBtn.textContent = '编辑';
+    insertImageBtn.hidden = true;
+    cancelEditBtn.hidden = true;
+    zoomPct = 100;
+    zoomLevel.textContent = '100%';
+    gridTwoRows = false;
+    updateGridLayoutBtn();
+    previewEditor.hidden = true;
+    previewFrame.hidden = false;
+    previewGrid.hidden = true;
+    previewGrid.innerHTML = '';
+    previewPanel._pendingTask = null;
+    fitContainer();
+    unwatchAll();
+  }
+
+  // ====== 图片插入（直接粘贴 / 点击选择本地文件） ======
+  let imageInsertTarget = null;   // 当前要把图片插入到哪个编辑框
+
+  function insertAtCursor(textarea, text) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+    textarea.value = value.slice(0, start) + text + value.slice(end);
+    const pos = start + text.length;
+    textarea.selectionStart = textarea.selectionEnd = pos;
+    textarea.focus();
+  }
+
+  function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // 把一组图片文件插入到编辑框光标处（转为 base64 内联，PDF/HTML/Word 均可显示）
+  async function insertImageFiles(textarea, files) {
+    const list = Array.from(files || []).filter(f => f && f.type && f.type.startsWith('image/'));
+    if (!list.length) return;
+    const parts = [];
+    for (const f of list) {
+      const dataUrl = await fileToDataUrl(f);
+      const alt = (f.name || '').replace(/\.[^.]+$/, '') || '图片';
+      parts.push('![' + alt + '](' + dataUrl + ')');
+    }
+    insertAtCursor(textarea, parts.join('\n\n'));
+  }
+
+  // 粘贴事件：剪贴板里有图片则插入为 markdown；纯文字则走默认粘贴
+  async function handlePasteImages(e, textarea) {
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        const f = item.getAsFile && item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (!files.length) return;
+    e.preventDefault();
+    await insertImageFiles(textarea, files);
+  }
+
+  // 单文件编辑框：粘贴图片
+  previewEditor.addEventListener('paste', (e) => handlePasteImages(e, previewEditor));
+  // 单文件「插入图片」按钮 → 打开文件选择
+  insertImageBtn.addEventListener('click', () => {
+    imageInsertTarget = previewEditor;
+    imageInput.click();
+  });
+  // 文件选择完成后插入到目标编辑框
+  imageInput.addEventListener('change', async () => {
+    const target = imageInsertTarget;
+    imageInsertTarget = null;
+    if (!target || !imageInput.files || !imageInput.files.length) { imageInput.value = ''; return; }
+    await insertImageFiles(target, imageInput.files);
+    imageInput.value = '';
+  });
+
+  // ====== 单文件预览：编辑 + 保存 / 取消 ======
+  editBtn.addEventListener('click', () => {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type === 'multi') return;
+    if (singleEditing) {
+      saveSingleEdit();
+    } else {
+      singleEditing = true;
+      previewEditor.value = task.content;
+      previewFrame.hidden = true;
+      previewEditor.hidden = false;
+      editBtn.textContent = '保存';
+      insertImageBtn.hidden = false;
+      cancelEditBtn.hidden = false;
+    }
+  });
+
+  // 放弃单文件编辑：不写回源文件，直接回到只读预览
+  function cancelSingleEdit() {
+    if (!singleEditing) return;
+    singleEditing = false;
+    previewEditor.hidden = true;
+    previewFrame.hidden = false;
+    editBtn.textContent = '编辑';
+    insertImageBtn.hidden = true;
+    cancelEditBtn.hidden = true;
+  }
+
+  cancelEditBtn.addEventListener('click', cancelSingleEdit);
+
+  async function saveSingleEdit() {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type === 'multi' || !singleEditing) return;
+    const newContent = previewEditor.value;
+    if (task.srcPath) {
+      const res = await window.api.writeMdFile(task.srcPath, newContent);
+      if (!res || !res.success) {
+        setStatus(task.statusEl, 'error', '保存失败：' + (res && res.error ? res.error : '未知错误'));
+        return;
+      }
+      selfSave = { path: task.srcPath, at: Date.now() };
+    }
+    task.content = newContent;
+    singleEditing = false;
+    previewEditor.hidden = true;
+    previewFrame.hidden = false;
+    editBtn.textContent = '编辑';
+    insertImageBtn.hidden = true;
+    cancelEditBtn.hidden = true;
+    const html = await window.api.previewMd(newContent, task.srcPath);
+    loadFrame(previewFrame, html);
+    setStatus(task.statusEl, 'success', '已保存并刷新预览');
+  }
+
+  // ====== 主题切换 ======
+  themeBtn.addEventListener('click', () => {
+    dark = !dark;
+    previewPanel.classList.toggle('dark', dark);
+    themeBtn.textContent = dark ? '☀️' : '🌙';
+    themeBtn.title = dark ? '切换明亮风格' : '切换黑暗风格';
+    applyAllTheme();
+  });
+
+  // ====== 全屏切换 ======
+  fullscreenBtn.addEventListener('click', () => {
+    if (previewPanel.classList.contains('fullscreen')) exitFullscreen(); else enterFullscreen();
+  });
+
+  // ====== 正文缩放（头部「编辑」同行的 − / 百分比 / + / 重置） ======
+  // 预览内 iframe 通过 postMessage 响应；独立下载打开的 HTML 保留其右上角缩放按钮
+  function zoomFrames() {
+    const task = previewPanel._pendingTask;
+    if (!task) return [];
+    if (task.type === 'multi') {
+      return Array.from(previewGrid.querySelectorAll('.pane-iframe'));
+    }
+    return [previewFrame];
+  }
+
+  function broadcastZoom() {
+    zoomLevel.textContent = zoomPct + '%';
+    zoomFrames().forEach((f) => {
+      try { f.contentWindow.postMessage({ type: 'mm-zoom-set', pct: zoomPct }, '*'); } catch (e) {}
+    });
+  }
+
+  zoomInBtn.addEventListener('click', () => { zoomPct = Math.min(300, zoomPct + 10); broadcastZoom(); });
+  zoomOutBtn.addEventListener('click', () => { zoomPct = Math.max(50, zoomPct - 10); broadcastZoom(); });
+  zoomResetBtn.addEventListener('click', () => { zoomPct = 100; broadcastZoom(); });
+
   // ====== 实时同步：监听正在预览的 .md 文件，外部编辑保存后自动刷新预览 ======
   let watchedPaths = [];
 
   // 当前预览任务涉及到的源文件路径（单文件预览 1 个，合并预览多个）
   function sourcePathsOf(task) {
     if (!task) return [];
-    if (task.type === 'merge') {
+    if (task.type === 'multi') {
       return (task.files || []).map(f => f.srcPath).filter(Boolean);
     }
     return task.srcPath ? [task.srcPath] : [];
@@ -1048,93 +1503,80 @@
     }
   }
 
-  // 外部保存 → 重新读取并重渲染预览，同时更新 _pendingTask 内容，保证「下载」用的也是最新内容
-  async function refreshPreview() {
+  // 外部保存 → 重新读取并重渲染预览；若对应文件正在本窗口编辑，则提示冲突并回退只读
+  async function refreshPreview(changedPath) {
     const task = previewPanel._pendingTask;
     if (!task || !previewPanel.classList.contains('open')) return;
-    try {
-      if (task.type === 'merge') {
-        // 记录预览中当前的标签顺序与重命名，外部同步刷新后保持不丢
-        const tabState = readMergedTabState();
-        const files = [];
-        for (const item of task.files) {
-          const res = await window.api.readMdFile(item.srcPath);
-          // 读取失败（如文件正被原子替换）时沿用旧内容，避免预览中断
-          files.push({
-            name: item.name,
-            content: (res && !res.error && res.content != null) ? res.content : item.content,
-            srcPath: item.srcPath
-          });
-        }
-        let finalFiles = files;
-        if (tabState && tabState.order.length === files.length) {
-          finalFiles = tabState.order.map(idx => ({
-            name: (tabState.names[idx] || files[idx].name || ''),
-            content: files[idx].content,
-            srcPath: files[idx].srcPath
-          }));
-        }
-        const html = await window.api.previewMerge(finalFiles);
-        previewFrame.srcdoc = html;
-        task.files = finalFiles;
+
+    if (task.type === 'multi') {
+      const panes = Array.from(previewGrid.querySelectorAll('.pane'));
+      const pane = panes.find(p => p._file && p._file.srcPath === changedPath);
+      if (!pane) return;
+      if (pane.classList.contains('editing')) {
+        await handleEditConflictForPane(pane, changedPath);
       } else {
-        const res = await window.api.readMdFile(task.srcPath);
-        if (!res || res.error || res.content == null) return;
-        const html = await window.api.previewMd(res.content, res.srcPath);
-        previewFrame.srcdoc = html;
-        task.content = res.content;
+        try {
+          const res = await window.api.readMdFile(changedPath);
+          if (!res || res.error || res.content == null) return;
+          pane._file.content = res.content;
+          const html = await window.api.previewMd(res.content, res.srcPath);
+          loadFrame(pane.querySelector('.pane-iframe'), html);
+          setStatus(task.statusEl, 'success', '已自动同步外部修改');
+        } catch (e) {}
       }
-      setStatus(task.statusEl, 'success', '已自动同步外部修改');
-    } catch (e) {
-      // 外部编辑可能正处于写入过程，忽略瞬态错误
+    } else {
+      if (changedPath && singleEditing && task.srcPath === changedPath) {
+        await handleSingleEditConflict(changedPath);
+      } else {
+        try {
+          const res = await window.api.readMdFile(task.srcPath);
+          if (!res || res.error || res.content == null) return;
+          const html = await window.api.previewMd(res.content, res.srcPath);
+          loadFrame(previewFrame, html);
+          task.content = res.content;
+          setStatus(task.statusEl, 'success', '已自动同步外部修改');
+        } catch (e) {}
+      }
     }
+  }
+
+  // 外部修改了正在编辑的单文件 → 丢弃本窗口编辑，回退只读
+  async function handleSingleEditConflict(changedPath) {
+    alert('有其他程序编辑了文档内容，在当前窗口的编辑不生效');
+    const task = previewPanel._pendingTask;
+    singleEditing = false;
+    editBtn.textContent = '编辑';
+    insertImageBtn.hidden = true;
+    cancelEditBtn.hidden = true;
+    previewEditor.hidden = true;
+    previewFrame.hidden = false;
+    const res = await window.api.readMdFile(changedPath);
+    if (res && !res.error && res.content != null) {
+      task.content = res.content;
+      const html = await window.api.previewMd(res.content, res.srcPath);
+      loadFrame(previewFrame, html);
+    }
+    setStatus(task.statusEl, 'success', '检测到外部修改，已回退到只读');
   }
 
   let syncRefreshTimer = null;
+  let pendingChangedPath = null;
   if (window.api && typeof window.api.onFileChanged === 'function') {
-    window.api.onFileChanged(() => {
+    window.api.onFileChanged((filePath) => {
+      // 跳过自己刚刚写文件触发的回显
+      if (filePath === selfSave.path && Date.now() - selfSave.at < 1500) return;
+      pendingChangedPath = filePath;
       clearTimeout(syncRefreshTimer);
-      syncRefreshTimer = setTimeout(refreshPreview, 200);
+      syncRefreshTimer = setTimeout(() => {
+        const p = pendingChangedPath;
+        pendingChangedPath = null;
+        refreshPreview(p);
+      }, 200);
     });
   }
 
-  // PDF 预览面板关闭 → 仅关闭预览，不自动生成
-  closeBtn.addEventListener('click', () => {
-    previewPanel.classList.remove('open');
-    document.body.classList.remove('has-preview');
-    fitContainer();
-    unwatchAll();
-  });
-
-  // 读取合并预览 iframe 当前的标签顺序与重命名后的名称（失败返回 null）
-  function readMergedTabState() {
-    try {
-      const doc = previewFrame.contentDocument;
-      if (!doc) return null;
-      const tabs = Array.from(doc.querySelectorAll('#tabs .tab'));
-      if (tabs.length === 0) return null;
-      const order = tabs.map(tab => Number(tab.getAttribute('data-doc-idx')));
-      const names = {};
-      tabs.forEach(tab => {
-        const label = tab.querySelector('.tab-label');
-        const idx = Number(tab.getAttribute('data-doc-idx'));
-        if (label) names[idx] = label.textContent.trim();
-      });
-      return { order, names };
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // 按预览中的最新标签顺序/名称重排 files，供下载使用
-  function collectMergedFiles(files) {
-    const st = readMergedTabState();
-    if (!st || st.order.length !== files.length) return files;
-    return st.order.map(idx => {
-      const f = files[idx] || {};
-      return { name: st.names[idx] || f.name || '', content: f.content, srcPath: f.srcPath };
-    });
-  }
+  // 关闭预览：重置一切状态
+  closeBtn.addEventListener('click', closePreview);
 
   // 下载按钮 → 根据任务类型下载 PDF 或 HTML
   downloadBtn.addEventListener('click', async () => {
@@ -1185,30 +1627,6 @@
         downloadBtn.disabled = false;
         downloadBtn.textContent = '下载 HTML';
       }
-    } else if (task.type === 'merge') {
-      downloadBtn.disabled = true;
-      downloadBtn.textContent = '生成中...';
-      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 HTML...');
-
-      try {
-        // 若用户在预览里拖拽调整了标签顺序或双击重命名，下载时按最新名称与顺序生成
-        const files = collectMergedFiles(task.files);
-        const result = await window.api.convertMerge(files, '合并文档');
-        if (result.success) {
-          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
-          downloadBtn.textContent = '下载完成 ✓';
-          downloadBtn.disabled = false;
-          setTimeout(() => { downloadBtn.textContent = '下载合并 HTML'; }, 3000);
-        } else {
-          setStatus(task.statusEl, 'error', '已取消');
-          downloadBtn.disabled = false;
-          downloadBtn.textContent = '下载合并 HTML';
-        }
-      } catch (err) {
-        setStatus(task.statusEl, 'error', err.message);
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = '下载合并 HTML';
-      }
     }
   });
 
@@ -1231,17 +1649,368 @@
     handleWord
   );
 
-  // ====== 多文件合并（第 4 个上传入口） ======
+  // ====== 多文件（第 4 个上传入口）：分屏预览 + 合并下载 ======
   const statusMerge = document.getElementById('statusMerge');
   const mergeOverlay = document.getElementById('mergeOverlay');
   const mergeListEl = document.getElementById('mergeList');
-  const mergeAddBtn = document.getElementById('mergeAddBtn');
   const mergeCancelBtn = document.getElementById('mergeCancelBtn');
   const mergeConfirmBtn = document.getElementById('mergeConfirmBtn');
   const mergeFileInput = document.getElementById('fileInputMerge');
 
-  let mergeFiles = []; // { name, file, srcPath }
+  let mergeFiles = [];       // { name, content, srcPath, checked }（合并弹窗列表）
+  let mergeDrag = null;      // { row, startY, moved }
+  let paneDrag = null;       // { pane, startX, moved }
+  let gridTwoRows = false;   // 多文件分屏：false = 1行×8格；true = 2行×4格
 
+  function updateGridLayoutBtn() {
+    gridLayoutBtn.textContent = gridTwoRows ? '布局：2×4' : '布局：1×8';
+    gridLayoutBtn.title = gridTwoRows ? '当前 2行×4格（点击切换为 1行×8格）' : '当前 1行×8格（点击切换为 2行×4格）';
+  }
+
+  gridLayoutBtn.addEventListener('click', () => {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type !== 'multi') return;
+    gridTwoRows = !gridTwoRows;
+    updateGridLayoutBtn();
+    renderMultiPreview(task.files);
+  });
+
+  // File 对象数组 → { name, content, srcPath }
+  async function filesToItems(fileList) {
+    const items = [];
+    for (const f of fileList) {
+      if (!f.name.toLowerCase().endsWith('.md')) continue;
+      const content = await readFile(f);
+      items.push({ name: f.name, content, srcPath: safeGetFilePath(f) });
+    }
+    return items;
+  }
+
+  // 打开多文件分屏预览（默认全屏）
+  async function openMultiPreview(fileList) {
+    if (!fileList || !fileList.length) return;
+    let items = await filesToItems(Array.from(fileList));
+    if (items.length === 0) {
+      setStatus(statusMerge, 'error', '请选择 .md 文件');
+      return;
+    }
+    if (items.length > MAX_MULTI) {
+      items = items.slice(0, MAX_MULTI);
+      setStatus(statusMerge, 'error', '最多 ' + MAX_MULTI + ' 个文件，已截取前 ' + MAX_MULTI + ' 个');
+    } else {
+      setStatus(statusMerge, 'success', '已加载 ' + items.length + ' 个文件，分屏预览中');
+    }
+    setPreviewMode('multi');
+    previewPanel._pendingTask = { type: 'multi', files: items, statusEl: statusMerge };
+    renderMultiPreview(items);
+    previewFilename.textContent = items.length + ' 个文件';
+    previewPanel.classList.add('open');
+    document.body.classList.add('has-preview');
+    enterFullscreen();   // 多文件默认全屏
+    updateWatch();
+  }
+
+  // 渲染分屏 pane（每文件一个；支持 1行×8格 / 2行×4格）
+  function renderMultiPreview(files) {
+    previewGrid.innerHTML = '';
+    previewGrid.classList.toggle('two-rows', gridTwoRows);
+
+    let topRow = null, bottomRow = null;
+    if (gridTwoRows) {
+      topRow = document.createElement('div');
+      topRow.className = 'grid-row top';
+      bottomRow = document.createElement('div');
+      bottomRow.className = 'grid-row bottom';
+      const divider = document.createElement('div');
+      divider.className = 'row-divider';
+      divider.id = 'rowDivider';
+      divider.title = '拖动调整上下两行高度';
+      previewGrid.append(topRow, divider, bottomRow);
+      attachRowDivider(divider, topRow, bottomRow);
+    }
+
+    const half = gridTwoRows ? Math.ceil(files.length / 2) : files.length;
+    files.forEach((f, i) => {
+      const pane = createPane(f);
+      if (gridTwoRows) {
+        (i < half ? topRow : bottomRow).appendChild(pane);
+      } else {
+        previewGrid.appendChild(pane);
+      }
+    });
+  }
+
+  function createPane(f) {
+    const pane = document.createElement('div');
+    pane.className = 'pane';
+    pane._file = f;
+
+    const header = document.createElement('div');
+    header.className = 'pane-header';
+
+    const name = document.createElement('span');
+    name.className = 'pane-name';
+    name.textContent = f.name;
+    name.title = f.srcPath || f.name;
+
+    const edit = document.createElement('button');
+    edit.className = 'pane-btn';
+    edit.textContent = '编辑';
+    edit.addEventListener('click', () => togglePaneEdit(pane));
+
+    const img = document.createElement('button');
+    img.className = 'pane-btn pane-img-btn';
+    img.textContent = '插图';
+    img.title = '插入图片（粘贴或选择本地文件）';
+    img.hidden = true;
+
+    const cancel = document.createElement('button');
+    cancel.className = 'pane-btn pane-cancel-btn';
+    cancel.textContent = '取消';
+    cancel.title = '放弃本分屏编辑（不保存）';
+    cancel.hidden = true;
+    cancel.addEventListener('click', () => cancelPaneEdit(pane));
+
+    const close = document.createElement('button');
+    close.className = 'pane-btn pane-close';
+    close.textContent = '×';
+    close.title = '关闭此文件';
+    close.addEventListener('click', () => closePane(pane));
+
+    header.append(name, edit, img, cancel, close);
+
+    const body = document.createElement('div');
+    body.className = 'pane-body';
+
+    const iframe = document.createElement('iframe');
+    iframe.className = 'pane-iframe';
+
+    const editor = document.createElement('textarea');
+    editor.className = 'pane-editor';
+    editor.spellcheck = false;
+    editor.hidden = true;
+    editor.addEventListener('paste', (e) => handlePasteImages(e, editor));
+
+    // 「插图」→ 选择本地图片插入到本 pane 的编辑框光标处
+    img.addEventListener('click', () => {
+      imageInsertTarget = editor;
+      imageInput.click();
+    });
+
+    body.append(iframe, editor);
+    pane.append(header, body);
+
+    window.api.previewMd(f.content, f.srcPath).then(html => loadFrame(iframe, html));
+    attachPaneDrag(pane);
+
+    return pane;
+  }
+
+  // 2行布局：拖动上下两行之间的边界线，调整两行高度
+  function attachRowDivider(divider, topRow, bottomRow) {
+    divider.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      divider.classList.add('dragging');
+      const grid = previewGrid;
+      const pad = 8;
+      function onMove(ev) {
+        const gridRect = grid.getBoundingClientRect();
+        const avail = gridRect.height - pad * 2 - divider.offsetHeight;
+        if (avail <= 0) return;
+        let topH = ev.clientY - gridRect.top - pad;
+        topH = Math.min(avail - 80, Math.max(80, topH));
+        const ratio = topH / avail;
+        topRow.style.flexGrow = ratio;
+        bottomRow.style.flexGrow = (1 - ratio);
+      }
+      function onUp() {
+        divider.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.body.style.cursor = '';
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+      document.body.style.cursor = 'row-resize';
+    });
+  }
+
+  // 分屏 pane：编辑 / 保存
+  function togglePaneEdit(pane) {
+    const iframe = pane.querySelector('.pane-iframe');
+    const editor = pane.querySelector('.pane-editor');
+    const editBtnEl = pane.querySelector('.pane-btn');
+    if (!editor.hidden) {
+      savePaneEdit(pane);
+    } else {
+      editor.value = pane._file.content;
+      iframe.hidden = true;
+      editor.hidden = false;
+      editBtnEl.textContent = '保存';
+      pane.querySelector('.pane-img-btn').hidden = false;
+      pane.querySelector('.pane-cancel-btn').hidden = false;
+      pane.classList.add('editing');
+    }
+  }
+
+  // 放弃分屏编辑：不写回源文件，回到只读预览
+  function cancelPaneEdit(pane) {
+    const iframe = pane.querySelector('.pane-iframe');
+    const editor = pane.querySelector('.pane-editor');
+    const editBtnEl = pane.querySelector('.pane-btn');
+    editor.hidden = true;
+    iframe.hidden = false;
+    editBtnEl.textContent = '编辑';
+    pane.querySelector('.pane-img-btn').hidden = true;
+    pane.querySelector('.pane-cancel-btn').hidden = true;
+    pane.classList.remove('editing');
+  }
+
+  async function savePaneEdit(pane) {
+    const iframe = pane.querySelector('.pane-iframe');
+    const editor = pane.querySelector('.pane-editor');
+    const editBtnEl = pane.querySelector('.pane-btn');
+    const f = pane._file;
+    const newContent = editor.value;
+    if (f.srcPath) {
+      const res = await window.api.writeMdFile(f.srcPath, newContent);
+      if (!res || !res.success) {
+        setStatus(previewPanel._pendingTask.statusEl, 'error', '保存失败：' + (res && res.error ? res.error : '未知错误'));
+        return;
+      }
+      selfSave = { path: f.srcPath, at: Date.now() };
+    }
+    f.content = newContent;
+    iframe.hidden = false;
+    editor.hidden = true;
+    editBtnEl.textContent = '编辑';
+    pane.querySelector('.pane-img-btn').hidden = true;
+    pane.querySelector('.pane-cancel-btn').hidden = true;
+    pane.classList.remove('editing');
+    const html = await window.api.previewMd(newContent, f.srcPath);
+    loadFrame(iframe, html);
+    setStatus(previewPanel._pendingTask.statusEl, 'success', '已保存并刷新：' + f.name);
+  }
+
+  // 外部修改了正在编辑的分屏 pane → 丢弃本窗口编辑，回退只读
+  async function handleEditConflictForPane(pane, changedPath) {
+    alert('有其他程序编辑了文档内容，在当前窗口的编辑不生效');
+    const task = previewPanel._pendingTask;
+    const res = await window.api.readMdFile(changedPath);
+    if (res && !res.error && res.content != null) {
+      pane._file.content = res.content;
+    }
+    const iframe = pane.querySelector('.pane-iframe');
+    const editor = pane.querySelector('.pane-editor');
+    const editBtnEl = pane.querySelector('.pane-btn');
+    editor.hidden = true;
+    iframe.hidden = false;
+    editBtnEl.textContent = '编辑';
+    pane.querySelector('.pane-img-btn').hidden = true;
+    pane.querySelector('.pane-cancel-btn').hidden = true;
+    pane.classList.remove('editing');
+    const html = await window.api.previewMd(pane._file.content, pane._file.srcPath);
+    loadFrame(iframe, html);
+    setStatus(task.statusEl, 'success', '检测到外部修改，已回退到只读');
+  }
+
+  function closePane(pane) {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type !== 'multi') return;
+    const i = task.files.indexOf(pane._file);
+    if (i < 0) return;
+    task.files.splice(i, 1);
+    if (task.files.length === 0) {
+      closePreview();
+      return;
+    }
+    renderMultiPreview(task.files);
+    previewFilename.textContent = task.files.length + ' 个文件';
+    updateWatch();
+  }
+
+  // 分屏 pane 拖拽排序（mousedown + 横向 mousemove，兼容 Electron/file://）
+  function attachPaneDrag(pane) {
+    const header = pane.querySelector('.pane-header');
+    header.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      if (pane.classList.contains('editing')) return;   // 编辑态禁止拖拽
+      if (e.target.closest('.pane-btn')) return;        // 点按钮不拖拽
+      paneDrag = { pane, startX: e.clientX, moved: false };
+      pane.classList.add('dragging');
+      e.preventDefault();
+    });
+  }
+
+  function reorderPanesFromDom() {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type !== 'multi') return;
+    task.files = Array.from(previewGrid.querySelectorAll('.pane')).map(p => p._file);
+    renderMultiPreview(task.files);
+    previewFilename.textContent = task.files.length + ' 个文件';
+  }
+
+  // 拖动过程中按平铺顺序重新落位（兼容 1行×8格 / 2行×4格 两种布局）
+  function reorderPanes(pane, target, before) {
+    const ordered = Array.from(previewGrid.querySelectorAll('.pane')).filter(p => p !== pane);
+    const idx = ordered.indexOf(target);
+    ordered.splice(before ? idx : idx + 1, 0, pane);
+    distributePanes(ordered);
+  }
+
+  function distributePanes(ordered) {
+    if (gridTwoRows) {
+      const top = previewGrid.querySelector('.grid-row.top');
+      const bottom = previewGrid.querySelector('.grid-row.bottom');
+      if (!top || !bottom) { previewGrid.replaceChildren(...ordered); return; }
+      const half = Math.ceil(ordered.length / 2);
+      top.replaceChildren(...ordered.slice(0, half));
+      bottom.replaceChildren(...ordered.slice(half));
+    } else {
+      previewGrid.replaceChildren(...ordered);
+    }
+  }
+
+  // 多文件入口拖放
+  const dropZoneMerge = document.getElementById('dropZoneMerge');
+  dropZoneMerge.addEventListener('click', () => mergeFileInput.click());
+  mergeFileInput.addEventListener('change', () => {
+    if (mergeFileInput.files.length) openMultiPreview(Array.from(mergeFileInput.files));
+    mergeFileInput.value = '';
+  });
+  dropZoneMerge.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneMerge.classList.add('drag-over'); });
+  dropZoneMerge.addEventListener('dragleave', () => dropZoneMerge.classList.remove('drag-over'));
+  dropZoneMerge.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZoneMerge.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) openMultiPreview(Array.from(e.dataTransfer.files));
+  });
+
+  // 预览内「+ 添加文件」
+  addFileBtn.addEventListener('click', () => addFileInput.click());
+  addFileInput.addEventListener('change', async () => {
+    if (!addFileInput.files.length) return;
+    const task = previewPanel._pendingTask;
+    if (!task || task.type !== 'multi') return;
+    const remaining = MAX_MULTI - task.files.length;
+    if (remaining <= 0) {
+      setStatus(statusMerge, 'error', '最多 ' + MAX_MULTI + ' 个文件');
+      addFileInput.value = '';
+      return;
+    }
+    const incoming = await filesToItems(Array.from(addFileInput.files));
+    addFileInput.value = '';
+    if (incoming.length === 0) return;
+    const toAdd = incoming.slice(0, remaining);
+    task.files = task.files.concat(toAdd);
+    renderMultiPreview(task.files);
+    previewFilename.textContent = task.files.length + ' 个文件';
+    setStatus(statusMerge, 'success', '已添加 ' + toAdd.length + ' 个文件（共 ' + task.files.length + ' 个）');
+    updateWatch();
+  });
+
+  // ====== 合并下载弹窗 ======
   function renderMergeList() {
     mergeListEl.innerHTML = '';
     if (mergeFiles.length === 0) {
@@ -1251,140 +2020,172 @@
       mergeListEl.appendChild(empty);
       return;
     }
-    mergeFiles.forEach((item, i) => {
+    mergeFiles.forEach((item) => {
       const row = document.createElement('div');
       row.className = 'merge-row';
-      row.setAttribute('data-index', i);
       row._item = item;
 
-      // 拖拽手柄：整行均可上下拖动排序，⠿ 为视觉提示
       const handle = document.createElement('span');
       handle.className = 'merge-drag';
       handle.textContent = '⠿';
       handle.title = '拖拽排序';
 
-      const idx = document.createElement('span');
-      idx.className = 'merge-idx';
-      idx.textContent = i + 1;
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'merge-check';
+      cb.checked = item.checked;
+      cb.title = '勾选 = 参与合并';
+      cb.addEventListener('change', () => { item.checked = cb.checked; });
 
-      const input = document.createElement('input');
-      input.className = 'merge-name';
-      input.value = item.name;
-      input.addEventListener('input', () => { item.name = input.value; });
+      const label = document.createElement('span');
+      label.className = 'merge-label';
+      label.textContent = item.name;
+      label.title = '双击重命名';
+      label.addEventListener('dblclick', () => startMergeRename(row, label, item));
 
-      const del = document.createElement('button');
-      del.className = 'merge-del';
-      del.textContent = '×';
-      del.title = '移除';
-      del.addEventListener('click', () => { mergeFiles.splice(i, 1); renderMergeList(); });
-
-      row.append(handle, idx, input, del);
+      row.append(handle, cb, label);
       mergeListEl.appendChild(row);
-
       attachMergeRowDrag(row);
     });
   }
 
-  // 用 mousedown + document 级 mousemove/mouseup 实现整行拖拽排序
-  // （不依赖指针捕获 / 原生 HTML5 拖拽，避免 Electron/file:// 下拖不动）
-  let mergeDrag = null; // { row, startY, moved }
+  function startMergeRename(row, label, item) {
+    if (row.querySelector('input.merge-rename')) return;
+    const input = document.createElement('input');
+    input.className = 'merge-name merge-rename';
+    input.value = item.name;
+    const commit = () => {
+      const name = input.value.trim();
+      if (name) item.name = name;
+      renderMergeList();
+    };
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') input.blur();
+      if (e.key === 'Escape') { input.value = item.name; input.blur(); }
+    });
+    label.replaceWith(input);
+    input.focus();
+    input.select();
+  }
 
+  // 整行拖拽排序（纵向）
   function attachMergeRowDrag(row) {
     row.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
-      if (e.target.closest('.merge-name') || e.target.closest('.merge-del')) return;
+      if (e.target.closest('.merge-name') || e.target.closest('.merge-check')) return;
       mergeDrag = { row, startY: e.clientY, moved: false };
       row.classList.add('dragging');
       e.preventDefault();
     });
   }
 
-  document.addEventListener('mousemove', (e) => {
-    if (!mergeDrag) return;
-    const dy = e.clientY - mergeDrag.startY;
-    if (!mergeDrag.moved && Math.abs(dy) < 6) return;
-    mergeDrag.moved = true;
-    const row = mergeDrag.row;
-    const rows = Array.from(mergeListEl.querySelectorAll('.merge-row'));
-    let target = null;
-    for (const r of rows) {
-      if (r === row) continue;
-      const rect = r.getBoundingClientRect();
-      if (e.clientY >= rect.top && e.clientY <= rect.bottom) { target = r; break; }
-    }
-    if (!target) return;
-    const rect = target.getBoundingClientRect();
-    if (e.clientY < rect.top + rect.height / 2) {
-      mergeListEl.insertBefore(row, target);
-    } else {
-      mergeListEl.insertBefore(row, target.nextSibling);
-    }
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (!mergeDrag) return;
-    const row = mergeDrag.row;
-    mergeDrag = null;
-    row.classList.remove('dragging');
-    mergeFiles = Array.from(mergeListEl.querySelectorAll('.merge-row')).map(r => r._item);
-    renderMergeList();
-  });
-
-  function openMergeDialog(incomingFiles) {
-    for (const f of incomingFiles) {
-      if (!f.name.toLowerCase().endsWith('.md')) continue;
-      mergeFiles.push({ name: f.name, file: f, srcPath: safeGetFilePath(f) });
-    }
+  function openMergePopup() {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type !== 'multi' || task.files.length === 0) return;
+    mergeFiles = task.files.map(f => ({ name: f.name, content: f.content, srcPath: f.srcPath, checked: true }));
     renderMergeList();
     mergeOverlay.classList.add('open');
   }
 
-  // 合并入口的拖放区（支持多文件）
-  const dropZoneMerge = document.getElementById('dropZoneMerge');
-  dropZoneMerge.addEventListener('click', () => mergeFileInput.click());
-  mergeFileInput.addEventListener('change', () => {
-    if (mergeFileInput.files.length) openMergeDialog(Array.from(mergeFileInput.files));
-    mergeFileInput.value = '';
-  });
-  dropZoneMerge.addEventListener('dragover', (e) => { e.preventDefault(); dropZoneMerge.classList.add('drag-over'); });
-  dropZoneMerge.addEventListener('dragleave', () => dropZoneMerge.classList.remove('drag-over'));
-  dropZoneMerge.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZoneMerge.classList.remove('drag-over');
-    if (e.dataTransfer.files.length) openMergeDialog(Array.from(e.dataTransfer.files));
-  });
+  mergeDownloadBtn.addEventListener('click', openMergePopup);
+  mergeCancelBtn.addEventListener('click', () => { mergeOverlay.classList.remove('open'); });
 
-  // 弹窗内「添加文件」复用同一个 input
-  mergeAddBtn.addEventListener('click', () => mergeFileInput.click());
-  mergeCancelBtn.addEventListener('click', () => { mergeFiles = []; mergeOverlay.classList.remove('open'); });
+  function currentMergeFormat() {
+    const el = mergeOverlay.querySelector('input[name="mergeFormat"]:checked');
+    return el ? el.value : 'html';
+  }
 
   mergeConfirmBtn.addEventListener('click', async () => {
-    if (mergeFiles.length === 0) {
-      setStatus(statusMerge, 'error', '请先添加 .md 文件');
+    const selected = mergeFiles.filter(item => item.checked);
+    if (selected.length === 0) {
+      setStatus(statusMerge, 'error', '请至少勾选一个文件');
       return;
     }
-    // 同步弹窗里编辑后的名字，空名回退为原文件名
-    mergeFiles.forEach(item => { if (!item.name.trim()) item.name = item.file.name; });
-    setStatus(statusMerge, 'loading', '<div class="spinner"></div> 合并中...');
+    const format = currentMergeFormat();
     mergeOverlay.classList.remove('open');
+    setStatus(statusMerge, 'loading', '<div class="spinner"></div> 合并中...');
+
+    const files = selected.map(item => ({
+      name: item.name.trim() || '未命名',
+      content: item.content,
+      srcPath: item.srcPath
+    }));
 
     try {
-      const files = [];
-      for (const item of mergeFiles) {
-        const content = await readFile(item.file);
-        files.push({ name: item.name.trim(), content, srcPath: item.srcPath });
+      let result;
+      if (format === 'html') {
+        result = await window.api.convertMerge(files, '合并文档');
+      } else if (format === 'pdf') {
+        result = await window.api.convertMergePdf(files, '合并文档');
+      } else {
+        result = await window.api.convertMergeWord(files, '合并文档');
       }
-      const html = await window.api.previewMerge(files);
-      previewFrame.srcdoc = html;
-      previewFilename.textContent = '合并文档 (' + files.length + ' 个文件)';
-      downloadBtn.textContent = '下载合并 HTML';
-      previewPanel.classList.add('open');
-      document.body.classList.add('has-preview');
-      setStatus(statusMerge, 'success', '已合并 ' + files.length + ' 个文件，点击「下载合并 HTML」导出');
-      previewPanel._pendingTask = { type: 'merge', files, statusEl: statusMerge };
-      updateWatch();
+      if (result.success) {
+        setStatus(statusMerge, 'success', '已下载：' + result.filePath.split('\\').pop());
+      } else {
+        setStatus(statusMerge, 'error', '已取消');
+      }
     } catch (err) {
       setStatus(statusMerge, 'error', err.message);
+    }
+  });
+
+  // 拖拽排序的全局移动/释放（合并弹窗纵向 + 分屏 pane 横向）
+  document.addEventListener('mousemove', (e) => {
+    if (mergeDrag) {
+      const dy = e.clientY - mergeDrag.startY;
+      if (!mergeDrag.moved && Math.abs(dy) < 6) return;
+      mergeDrag.moved = true;
+      const row = mergeDrag.row;
+      const rows = Array.from(mergeListEl.querySelectorAll('.merge-row'));
+      let target = null;
+      for (const r of rows) {
+        if (r === row) continue;
+        const rect = r.getBoundingClientRect();
+        if (e.clientY >= rect.top && e.clientY <= rect.bottom) { target = r; break; }
+      }
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      if (e.clientY < rect.top + rect.height / 2) mergeListEl.insertBefore(row, target);
+      else mergeListEl.insertBefore(row, target.nextSibling);
+    } else if (paneDrag) {
+      const dx = e.clientX - paneDrag.startX;
+      const dy = e.clientY - paneDrag.startY;
+      if (!paneDrag.moved && Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+      paneDrag.moved = true;
+      const pane = paneDrag.pane;
+      const panes = Array.from(previewGrid.querySelectorAll('.pane'));
+      let target = null;
+      for (const p of panes) {
+        if (p === pane) continue;
+        const rect = p.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+          target = p; break;
+        }
+      }
+      if (!target) return;
+      const rect = target.getBoundingClientRect();
+      const before = gridTwoRows
+        ? (e.clientY < rect.top + rect.height / 2)
+        : (e.clientX < rect.left + rect.width / 2);
+      reorderPanes(pane, target, before);
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (mergeDrag) {
+      const row = mergeDrag.row;
+      mergeDrag = null;
+      row.classList.remove('dragging');
+      mergeFiles = Array.from(mergeListEl.querySelectorAll('.merge-row')).map(r => r._item);
+      renderMergeList();
+    }
+    if (paneDrag) {
+      const pane = paneDrag.pane;
+      paneDrag = null;
+      pane.classList.remove('dragging');
+      reorderPanesFromDom();
     }
   });
 
@@ -1585,11 +2386,13 @@
     setStatus(statusHtml, 'loading', '<div class="spinner"></div> 加载预览...');
     try {
       const html = await window.api.previewMd(result.content, result.srcPath);
-      previewFrame.srcdoc = html;
+      setPreviewMode('single');
+      loadFrame(previewFrame, html);
       previewFilename.textContent = result.filename;
       downloadBtn.textContent = '下载 HTML';
       previewPanel.classList.add('open');
       document.body.classList.add('has-preview');
+      enterFullscreen();   // 双击 .md 打开默认全屏预览
       setStatus(statusHtml, 'success', '预览已就绪，点击「下载 HTML」保存到指定目录');
       previewPanel._pendingTask = { type: 'html', content: result.content, filename: result.filename, srcPath: result.srcPath, statusEl: statusHtml };
       updateWatch();

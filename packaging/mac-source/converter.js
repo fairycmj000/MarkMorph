@@ -36,6 +36,17 @@ function inlineImage(href, basedir) {
   }
 }
 
+// 把 data: URI 解码为 Buffer（用于 Word 内嵌粘贴/插入的图片）
+function dataUrlToBuffer(dataUrl) {
+  try {
+    const m = /^data:([^;,]*)(;base64)?,([\s\S]*)$/.exec(dataUrl);
+    if (!m) return null;
+    return m[2] ? Buffer.from(m[3], 'base64') : Buffer.from(decodeURIComponent(m[3]), 'utf8');
+  } catch (e) {
+    return null;
+  }
+}
+
 // 安全的日志函数，避免 EPIPE 错误
 function safeLog(...args) {
   try {
@@ -243,13 +254,14 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   /* 主内容区 */
   #main {
     margin-left: var(--sidebar-w, 280px);
-    max-width: ${useA3 ? 1450 : 1000}px;
+    /* 自适应：撑满可视区域，避免宽屏右侧留白（打印时由 @media print 覆盖回 100%） */
+    max-width: none;
   }
   #content {
     zoom: var(--zoom, 1);
     padding: 36px 50px;
     /* 用 JS 直接写入具体长度，避免 calc() 除以 var() 的兼容性坑（会导致 max-width 失效 → 放大后内容溢出到右侧留白） */
-    max-width: var(--content-max-w, ${useA3 ? 1450 : 1000}px);
+    max-width: var(--content-max-w, none);
   }
   h1, h2, h3, h4, h5, h6 {
     margin-top: 24px;
@@ -469,11 +481,12 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
     font-variant-numeric: tabular-nums;
   }
   #lightbox-controls #lb-reset { font-size: 12px; padding: 0 10px; }
+  #lightbox-controls #lb-download { font-size: 12px; padding: 0 12px; }
 
   @media (max-width: 800px) {
     #sidebar, #sidebar-resizer, #expand-btn { display: none; }
     #main { margin-left: 0; max-width: 100%; }
-    #content { padding: 20px; zoom: 1; max-width: 100%; }
+    #content { padding: 20px; }
   }
   @page {
     size: ${useA3 ? 'A3' : 'A4'};
@@ -535,6 +548,7 @@ ${bodyHtml}
     <span id="lb-level">100%</span>
     <button id="lb-zoom-in" title="放大" aria-label="放大">+</button>
     <button id="lb-reset" title="重置缩放">重置</button>
+    <button id="lb-download" title="下载当前图片 / 流程图">下载</button>
   </div>
 </div>
 <script>
@@ -637,23 +651,45 @@ ${bodyHtml}
 
     // ---- 正文缩放（仅 #content，不影响导航栏）----
     var zoomPct = 100;
-    var BASE = ${useA3 ? 1450 : 1000};
     var zoomLevelEl = document.getElementById('zoom-level');
+    var zoomInIframe = (function(){ try { return window.parent !== window.self; } catch (e) { return false; } })();
+    function naturalWidth() {
+      // 可视内容区宽度：#main 已用 margin-left 扣除侧栏；异常时回退窗口宽度
+      return (main && main.clientWidth) ? main.clientWidth : window.innerWidth;
+    }
+    function reportZoom() {
+      if (zoomLevelEl) zoomLevelEl.textContent = zoomPct + '%';
+      if (zoomInIframe) { try { window.parent.postMessage({ type: 'mm-zoom-level', pct: zoomPct }, '*'); } catch (e) {} }
+    }
     function applyZoom() {
       var z = zoomPct / 100;
       content.style.setProperty('--zoom', String(z));
-      // 缩放后内容渲染宽度 = 布局宽度 × z，因此布局宽度要设为 BASE/z，放大后正好撑满、不溢出到右侧留白
-      content.style.setProperty('--content-max-w', (BASE / z) + 'px');
-      zoomLevelEl.textContent = zoomPct + '%';
+      // 缩放后内容渲染宽度 = 布局宽度 × z，因此布局宽度要设为 naturalWidth()/z，放大后正好撑满、不溢出到右侧留白
+      content.style.setProperty('--content-max-w', (naturalWidth() / z) + 'px');
+      reportZoom();
     }
     function setZoom(pct) {
       zoomPct = Math.min(300, Math.max(50, Math.round(pct / 10) * 10));
       applyZoom();
     }
-    document.getElementById('zoom-in').addEventListener('click', function() { setZoom(zoomPct + 10); });
-    document.getElementById('zoom-out').addEventListener('click', function() { setZoom(zoomPct - 10); });
-    document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(100); });
+    // 预览内缩放改由外部工具栏（同「编辑」一行的 − / + / 重置）通过 postMessage 控制；
+    // 独立下载打开的 HTML 仍保留右上角缩放按钮。
+    if (zoomInIframe) {
+      var zt = document.getElementById('zoom-toolbar');
+      if (zt) zt.style.display = 'none';
+      window.addEventListener('message', function(e) {
+        var d = e && e.data;
+        if (!d) return;
+        if (d.type === 'mm-zoom-set') setZoom(Number(d.pct) || 100);
+        else if (d.type === 'mm-zoom-delta') setZoom(zoomPct + (Number(d.delta) || 0));
+      });
+    } else {
+      document.getElementById('zoom-in').addEventListener('click', function() { setZoom(zoomPct + 10); });
+      document.getElementById('zoom-out').addEventListener('click', function() { setZoom(zoomPct - 10); });
+      document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(100); });
+    }
     applyZoom();
+    window.addEventListener('resize', applyZoom);
 
     // ---- 导航栏宽度 / 折叠 ----
     var SIDEBAR_MIN = 160, SIDEBAR_MAX = 800;
@@ -663,6 +699,7 @@ ${bodyHtml}
     function applySidebar() {
       document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
       body.classList.toggle('collapsed', collapsed);
+      applyZoom();
     }
     function setCollapsed(c) { collapsed = c; applySidebar(); }
     document.getElementById('collapse-btn').addEventListener('click', function() { setCollapsed(true); });
@@ -675,6 +712,7 @@ ${bodyHtml}
         var maxW = Math.min(SIDEBAR_MAX, window.innerWidth * 0.6);
         sidebarW = Math.min(maxW, Math.max(SIDEBAR_MIN, startW + (ev.clientX - startX)));
         document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
+        applyZoom();
       }
       function onUp() {
         document.removeEventListener('mousemove', onMove);
@@ -692,7 +730,7 @@ ${bodyHtml}
     var lbImg = document.getElementById('lightbox-img');
     var lbLevel = document.getElementById('lb-level');
     var stage = document.getElementById('lightbox-stage');
-    var lb = { base: 1, k: 1, tx: 0, ty: 0, iw: 1, ih: 1 };
+    var lb = { base: 1, k: 1, tx: 0, ty: 0, iw: 1, ih: 1, downloadHref: null, downloadSvg: null };
     var didDrag = false;
 
     function lbApply() {
@@ -714,6 +752,8 @@ ${bodyHtml}
     function lbOpenImage(img) {
       var im = document.createElement('img');
       im.src = img.src;
+      lb.downloadHref = img.src;
+      lb.downloadSvg = null;
       im.style.maxWidth = 'none';
       im.style.maxHeight = 'none';
       lbImg.innerHTML = '';
@@ -741,6 +781,8 @@ ${bodyHtml}
       clone.style.height = h + 'px';
       // 放大查看时铺白底，避免黑色 lightbox 背景下灰色线条难以辨认
       clone.style.background = '#ffffff';
+      lb.downloadSvg = new XMLSerializer().serializeToString(clone);
+      lb.downloadHref = null;
       lbImg.innerHTML = '';
       lbImg.appendChild(clone);
       lb.iw = w; lb.ih = h;
@@ -760,6 +802,37 @@ ${bodyHtml}
       lb.k = newK;
       lbApply();
     }
+    function lbDownloadName(href) {
+      var ext = 'png';
+      if (href) {
+        var m = /^data:image[/]([a-zA-Z0-9.+-]+)/.exec(href);
+        if (m) ext = m[1].split('+')[0];
+        else {
+          var clean = href.split('?')[0];
+          var base = clean.split('/').pop();
+          var em = /[.]([a-zA-Z0-9]+)$/.exec(base);
+          if (em) ext = em[1];
+        }
+      }
+      return '图片.' + ext;
+    }
+    function lbDownload() {
+      var a = document.createElement('a');
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      if (lb.downloadSvg != null) {
+        var blob = new Blob([lb.downloadSvg], { type: 'image/svg+xml;charset=utf-8' });
+        a.href = URL.createObjectURL(blob);
+        a.download = '流程图.svg';
+        a.click();
+        setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+      } else if (lb.downloadHref) {
+        a.href = lb.downloadHref;
+        a.download = lbDownloadName(lb.downloadHref);
+        a.click();
+      }
+      a.remove();
+    }
 
     document.querySelectorAll('#main img').forEach(function(img) {
       img.addEventListener('click', function() { lbOpenImage(img); });
@@ -775,6 +848,7 @@ ${bodyHtml}
     });
 
     document.getElementById('lightbox-close').addEventListener('click', lbClose);
+    document.getElementById('lb-download').addEventListener('click', lbDownload);
     document.getElementById('lb-zoom-in').addEventListener('click', function() {
       lbZoom(1.25, stage.clientWidth / 2, stage.clientHeight / 2);
     });
@@ -840,7 +914,6 @@ ${bodyHtml}
 function buildMergedHtml(files, mermaidSrc, editable) {
   const list = (files || []).filter(f => f && typeof f.content === 'string');
   const useA3 = list.some(f => hasWideTable(f.content));
-  const BASE = useA3 ? 1450 : 1000;
   const MERMAID_SRC = mermaidSrc || pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
 
   function basedirOf(srcPath) {
@@ -999,12 +1072,13 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   /* 主内容区 */
   #main {
     margin-left: var(--sidebar-w, 280px);
-    max-width: ${BASE}px;
+    /* 自适应：撑满可视区域，避免宽屏右侧留白（打印时由 @media print 覆盖回 100%） */
+    max-width: none;
   }
   #content {
     zoom: var(--zoom, 1);
     padding: 64px 50px 36px;
-    max-width: var(--content-max-w, ${BASE}px);
+    max-width: var(--content-max-w, none);
   }
   .doc-section { display: none; scroll-margin-top: 60px; }
   .doc-section.active { display: block; }
@@ -1161,12 +1235,13 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   #lightbox-controls button:hover { background: rgba(255, 255, 255, 0.25); }
   #lightbox-controls #lb-level { min-width: 48px; text-align: center; color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
   #lightbox-controls #lb-reset { font-size: 12px; padding: 0 10px; }
+  #lightbox-controls #lb-download { font-size: 12px; padding: 0 12px; }
 
   @media (max-width: 800px) {
     #sidebar, #sidebar-resizer, #expand-btn { display: none; }
     #tab-bar { left: 0; }
     #main { margin-left: 0; max-width: 100%; }
-    #content { padding: 64px 20px 20px; zoom: 1; max-width: 100%; }
+    #content { padding: 64px 20px 20px; }
   }
   @page {
     size: ${useA3 ? 'A3' : 'A4'};
@@ -1223,6 +1298,7 @@ ${sectionsHtml}
     <span id="lb-level">100%</span>
     <button id="lb-zoom-in" title="放大" aria-label="放大">+</button>
     <button id="lb-reset" title="重置缩放">重置</button>
+    <button id="lb-download" title="下载当前图片 / 流程图">下载</button>
   </div>
 </div>
 <script>
@@ -1428,26 +1504,49 @@ ${sectionsHtml}
 <script>
   // ===== 正文缩放 / 导航栏宽度·折叠 / 图片 lightbox（与单文件一致） =====
   (function() {
+    var main = document.getElementById('main');
     var content = document.getElementById('content');
     var body = document.body;
 
     var zoomPct = 100;
-    var BASE = ${BASE};
     var zoomLevelEl = document.getElementById('zoom-level');
+    var zoomInIframe = (function(){ try { return window.parent !== window.self; } catch (e) { return false; } })();
+    function naturalWidth() {
+      // 可视内容区宽度：#main 已用 margin-left 扣除侧栏；异常时回退窗口宽度
+      return (main && main.clientWidth) ? main.clientWidth : window.innerWidth;
+    }
+    function reportZoom() {
+      if (zoomLevelEl) zoomLevelEl.textContent = zoomPct + '%';
+      if (zoomInIframe) { try { window.parent.postMessage({ type: 'mm-zoom-level', pct: zoomPct }, '*'); } catch (e) {} }
+    }
     function applyZoom() {
       var z = zoomPct / 100;
       content.style.setProperty('--zoom', String(z));
-      content.style.setProperty('--content-max-w', (BASE / z) + 'px');
-      zoomLevelEl.textContent = zoomPct + '%';
+      content.style.setProperty('--content-max-w', (naturalWidth() / z) + 'px');
+      reportZoom();
     }
     function setZoom(pct) {
       zoomPct = Math.min(300, Math.max(50, Math.round(pct / 10) * 10));
       applyZoom();
     }
-    document.getElementById('zoom-in').addEventListener('click', function() { setZoom(zoomPct + 10); });
-    document.getElementById('zoom-out').addEventListener('click', function() { setZoom(zoomPct - 10); });
-    document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(100); });
+    // 预览内缩放改由外部工具栏（同「编辑」一行的 − / + / 重置）通过 postMessage 控制；
+    // 独立下载打开的 HTML 仍保留右上角缩放按钮。
+    if (zoomInIframe) {
+      var zt = document.getElementById('zoom-toolbar');
+      if (zt) zt.style.display = 'none';
+      window.addEventListener('message', function(e) {
+        var d = e && e.data;
+        if (!d) return;
+        if (d.type === 'mm-zoom-set') setZoom(Number(d.pct) || 100);
+        else if (d.type === 'mm-zoom-delta') setZoom(zoomPct + (Number(d.delta) || 0));
+      });
+    } else {
+      document.getElementById('zoom-in').addEventListener('click', function() { setZoom(zoomPct + 10); });
+      document.getElementById('zoom-out').addEventListener('click', function() { setZoom(zoomPct - 10); });
+      document.getElementById('zoom-reset').addEventListener('click', function() { setZoom(100); });
+    }
     applyZoom();
+    window.addEventListener('resize', applyZoom);
 
     var SIDEBAR_MIN = 160, SIDEBAR_MAX = 800;
     var sidebarW = 280, collapsed = false;
@@ -1456,6 +1555,7 @@ ${sectionsHtml}
     function applySidebar() {
       document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
       body.classList.toggle('collapsed', collapsed);
+      applyZoom();
     }
     function setCollapsed(c) { collapsed = c; applySidebar(); }
     document.getElementById('collapse-btn').addEventListener('click', function() { setCollapsed(true); });
@@ -1468,6 +1568,7 @@ ${sectionsHtml}
         var maxW = Math.min(SIDEBAR_MAX, window.innerWidth * 0.6);
         sidebarW = Math.min(maxW, Math.max(SIDEBAR_MIN, startW + (ev.clientX - startX)));
         document.documentElement.style.setProperty('--sidebar-w', sidebarW + 'px');
+        applyZoom();
       }
       function onUp() {
         document.removeEventListener('mousemove', onMove);
@@ -1484,7 +1585,7 @@ ${sectionsHtml}
     var lbImg = document.getElementById('lightbox-img');
     var lbLevel = document.getElementById('lb-level');
     var stage = document.getElementById('lightbox-stage');
-    var lb = { base: 1, k: 1, tx: 0, ty: 0, iw: 1, ih: 1 };
+    var lb = { base: 1, k: 1, tx: 0, ty: 0, iw: 1, ih: 1, downloadHref: null, downloadSvg: null };
     var didDrag = false;
 
     function lbApply() {
@@ -1506,6 +1607,8 @@ ${sectionsHtml}
     function lbOpenImage(img) {
       var im = document.createElement('img');
       im.src = img.src;
+      lb.downloadHref = img.src;
+      lb.downloadSvg = null;
       im.style.maxWidth = 'none';
       im.style.maxHeight = 'none';
       lbImg.innerHTML = '';
@@ -1533,6 +1636,8 @@ ${sectionsHtml}
       clone.style.height = h + 'px';
       // 放大查看时铺白底，避免黑色 lightbox 背景下灰色线条难以辨认
       clone.style.background = '#ffffff';
+      lb.downloadSvg = new XMLSerializer().serializeToString(clone);
+      lb.downloadHref = null;
       lbImg.innerHTML = '';
       lbImg.appendChild(clone);
       lb.iw = w; lb.ih = h;
@@ -1552,6 +1657,37 @@ ${sectionsHtml}
       lb.k = newK;
       lbApply();
     }
+    function lbDownloadName(href) {
+      var ext = 'png';
+      if (href) {
+        var m = /^data:image[/]([a-zA-Z0-9.+-]+)/.exec(href);
+        if (m) ext = m[1].split('+')[0];
+        else {
+          var clean = href.split('?')[0];
+          var base = clean.split('/').pop();
+          var em = /[.]([a-zA-Z0-9]+)$/.exec(base);
+          if (em) ext = em[1];
+        }
+      }
+      return '图片.' + ext;
+    }
+    function lbDownload() {
+      var a = document.createElement('a');
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      if (lb.downloadSvg != null) {
+        var blob = new Blob([lb.downloadSvg], { type: 'image/svg+xml;charset=utf-8' });
+        a.href = URL.createObjectURL(blob);
+        a.download = '流程图.svg';
+        a.click();
+        setTimeout(function() { URL.revokeObjectURL(a.href); }, 1000);
+      } else if (lb.downloadHref) {
+        a.href = lb.downloadHref;
+        a.download = lbDownloadName(lb.downloadHref);
+        a.click();
+      }
+      a.remove();
+    }
 
     document.querySelectorAll('#main img').forEach(function(img) {
       img.addEventListener('click', function() { lbOpenImage(img); });
@@ -1567,6 +1703,7 @@ ${sectionsHtml}
     });
 
     document.getElementById('lightbox-close').addEventListener('click', lbClose);
+    document.getElementById('lb-download').addEventListener('click', lbDownload);
     document.getElementById('lb-zoom-in').addEventListener('click', function() { lbZoom(1.25, stage.clientWidth / 2, stage.clientHeight / 2); });
     document.getElementById('lb-zoom-out').addEventListener('click', function() { lbZoom(0.8, stage.clientWidth / 2, stage.clientHeight / 2); });
     document.getElementById('lb-reset').addEventListener('click', lbReset);
@@ -1682,7 +1819,9 @@ function buildDocx(mdContent, mermaidImages = [], basedir) {
   // 读取本地图片为 buffer 及像素尺寸（用于 Word 内嵌）
   function loadDocxImage(href) {
     try {
-      if (!href || /^(https?:|data:)/i.test(href)) return null;
+      if (!href) return null;
+      if (/^data:/i.test(href)) return dataUrlToBuffer(href);
+      if (/^https?:/i.test(href)) return null;
       let p = href.replace(/^file:\/{0,3}/i, '');
       try { p = decodeURIComponent(p); } catch (e) {}
       if (!path.isAbsolute(p) && basedir) p = path.resolve(basedir, p);
