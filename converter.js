@@ -331,7 +331,10 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   }
   .table-filter-bar .filter-field { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   .table-filter-bar .filter-field label { color: #586069; }
-  .table-filter-bar select {
+  .table-filter-bar .filter-multi { position: relative; display: inline-block; vertical-align: middle; }
+  .table-filter-bar .filter-multi-trigger {
+    display: inline-block;
+    min-width: 90px;
     max-width: 180px;
     padding: 3px 6px;
     font-size: 12px;
@@ -339,7 +342,55 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
     border-radius: 4px;
     background: #fff;
     color: #24292e;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
+  .table-filter-bar .filter-multi-trigger::after { content: ' ▾'; color: #6a737d; }
+  .table-filter-bar .filter-multi-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 60;
+    min-width: 150px;
+    max-width: 280px;
+    max-height: 240px;
+    overflow: auto;
+    margin-top: 2px;
+    padding: 4px;
+    background: #fff;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    white-space: nowrap;
+  }
+  .table-filter-bar .filter-multi.open .filter-multi-panel { display: block; }
+  .table-filter-bar .filter-opt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .table-filter-bar .filter-opt:hover { background: #f0f6ff; }
+  .table-filter-bar .filter-opt input { margin: 0; }
+  .table-filter-bar .filter-clear {
+    display: block;
+    width: 100%;
+    margin: 0 0 4px;
+    padding: 3px 0;
+    font-size: 12px;
+    text-align: center;
+    border: none;
+    border-bottom: 1px solid #eaecef;
+    background: transparent;
+    color: #0366d6;
+    cursor: pointer;
+  }
+  .table-filter-bar .filter-clear:hover { background: #e6f0ff; }
   .table-filter-bar .filter-count { color: #6a737d; margin-left: auto; }
   .table-filter-bar button {
     padding: 3px 10px;
@@ -624,6 +675,16 @@ ${bodyHtml}
       if (!h.id) h.id = 'heading-' + i;
     });
 
+    // 滚动到目标标题：手动计算 scrollTop 以兼容正文 zoom 缩放（scrollIntoView 在 zoom 下会定位偏差）
+    function scrollToTarget(el) {
+      var scrollEl = document.scrollingElement || document.documentElement;
+      var current = window.pageYOffset || scrollEl.scrollTop || document.documentElement.scrollTop || 0;
+      var margin = 0;
+      try { margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0; } catch (e) {}
+      var top = el.getBoundingClientRect().top + current - margin;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
     // 按标题层级构建目录树（虚拟根 level=0），支持逐级折叠/展开
     function buildTocTree() {
       var stack = [{ level: 0, children: [] }];
@@ -677,7 +738,7 @@ ${bodyHtml}
         a.dataset.target = node.heading.id;
         a.addEventListener('click', function(e) {
           e.preventDefault();
-          node.heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          scrollToTarget(node.heading);
           setTimeout(updateActive, 50);
         });
 
@@ -1043,8 +1104,15 @@ ${bodyHtml}
   })();
 </script>
 <script>
-  // ===== 表格字段筛选：对 data-filterable 表格按字段下拉筛选 =====
+  // ===== 表格字段筛选：对 data-filterable 表格按字段多选筛选 =====
   (function() {
+    // 点击筛选栏以外区域时收起下拉面板
+    document.addEventListener('click', function(e) {
+      var inside = e.target.closest ? e.target.closest('.filter-multi') : null;
+      document.querySelectorAll('.filter-multi.open').forEach(function(m) {
+        if (m !== inside) m.classList.remove('open');
+      });
+    });
     function initFilters() {
       document.querySelectorAll('table[data-filterable]').forEach(function(table) {
         if (table._mmFilterInit) return;
@@ -1070,17 +1138,30 @@ ${bodyHtml}
         var bar = document.createElement('div');
         bar.className = 'table-filter-bar';
 
-        var selects = [];
+        var multis = [];
         cols.forEach(function(col, i) {
           var field = document.createElement('span');
           field.className = 'filter-field';
           var lab = document.createElement('label');
           lab.textContent = labels[i] + '：';
-          var sel = document.createElement('select');
-          var allOpt = document.createElement('option');
-          allOpt.value = '';
-          allOpt.textContent = '全部';
-          sel.appendChild(allOpt);
+
+          var multi = document.createElement('span');
+          multi.className = 'filter-multi';
+
+          var trigger = document.createElement('span');
+          trigger.className = 'filter-multi-trigger';
+          trigger.textContent = '全部';
+
+          var panel = document.createElement('span');
+          panel.className = 'filter-multi-panel';
+
+          var clearBtn = document.createElement('button');
+          clearBtn.type = 'button';
+          clearBtn.className = 'filter-clear';
+          clearBtn.textContent = '清空';
+          panel.appendChild(clearBtn);
+
+          var checkboxes = [];
           var vals = Object.keys(optionSets[i]);
           vals.sort(function(a, b) {
             var na = Number(a), nb = Number(b);
@@ -1088,15 +1169,23 @@ ${bodyHtml}
             return String(a).localeCompare(String(b), 'zh-CN');
           });
           vals.forEach(function(v) {
-            var opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v;
-            sel.appendChild(opt);
+            var opt = document.createElement('label');
+            opt.className = 'filter-opt';
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = v;
+            opt.appendChild(cb);
+            opt.appendChild(document.createTextNode(' ' + v));
+            panel.appendChild(opt);
+            checkboxes.push(cb);
           });
+
+          multi.appendChild(trigger);
+          multi.appendChild(panel);
           field.appendChild(lab);
-          field.appendChild(sel);
+          field.appendChild(multi);
           bar.appendChild(field);
-          selects.push(sel);
+          multis.push({ col: col, multi: multi, trigger: trigger, panel: panel, checkboxes: checkboxes, clearBtn: clearBtn });
         });
 
         var countEl = document.createElement('span');
@@ -1111,22 +1200,45 @@ ${bodyHtml}
         bar.appendChild(countEl);
 
         function apply() {
-          var active = {};
-          selects.forEach(function(sel, i) { if (sel.value !== '') active[cols[i]] = sel.value; });
           var shown = 0;
           dataRows.forEach(function(tr) {
             var match = true;
-            for (var k in active) {
-              if ((tr.getAttribute('data-f' + k) || '').trim() !== active[k]) { match = false; break; }
+            for (var i = 0; i < multis.length; i++) {
+              var m = multis[i];
+              var activeVals = m.checkboxes.filter(function(cb) { return cb.checked; }).map(function(cb) { return cb.value; });
+              if (!activeVals.length) continue;
+              var v = (tr.getAttribute('data-f' + m.col) || '').trim();
+              if (activeVals.indexOf(v) === -1) { match = false; break; }
             }
             tr.style.display = match ? '' : 'none';
             if (match) shown++;
           });
           countEl.textContent = '共 ' + shown + ' 条';
+          multis.forEach(function(m) {
+            var n = m.checkboxes.filter(function(cb) { return cb.checked; }).length;
+            m.trigger.textContent = n === 0 ? '全部' : '已选 ' + n + ' 项';
+          });
         }
-        selects.forEach(function(sel) { sel.addEventListener('change', apply); });
+
+        multis.forEach(function(m) {
+          m.trigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isOpen = m.multi.classList.contains('open');
+            document.querySelectorAll('.filter-multi.open').forEach(function(x) { x.classList.remove('open'); });
+            if (!isOpen) m.multi.classList.add('open');
+          });
+          m.panel.addEventListener('click', function(e) { e.stopPropagation(); });
+          m.checkboxes.forEach(function(cb) { cb.addEventListener('change', apply); });
+          m.clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            m.checkboxes.forEach(function(cb) { cb.checked = false; });
+            apply();
+          });
+        });
         resetBtn.addEventListener('click', function() {
-          selects.forEach(function(sel) { sel.value = ''; });
+          multis.forEach(function(m) {
+            m.checkboxes.forEach(function(cb) { cb.checked = false; });
+          });
           apply();
         });
 
@@ -1388,7 +1500,10 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   }
   .table-filter-bar .filter-field { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
   .table-filter-bar .filter-field label { color: #586069; }
-  .table-filter-bar select {
+  .table-filter-bar .filter-multi { position: relative; display: inline-block; vertical-align: middle; }
+  .table-filter-bar .filter-multi-trigger {
+    display: inline-block;
+    min-width: 90px;
     max-width: 180px;
     padding: 3px 6px;
     font-size: 12px;
@@ -1396,7 +1511,55 @@ function buildMergedHtml(files, mermaidSrc, editable) {
     border-radius: 4px;
     background: #fff;
     color: #24292e;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
+  .table-filter-bar .filter-multi-trigger::after { content: ' ▾'; color: #6a737d; }
+  .table-filter-bar .filter-multi-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 60;
+    min-width: 150px;
+    max-width: 280px;
+    max-height: 240px;
+    overflow: auto;
+    margin-top: 2px;
+    padding: 4px;
+    background: #fff;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    white-space: nowrap;
+  }
+  .table-filter-bar .filter-multi.open .filter-multi-panel { display: block; }
+  .table-filter-bar .filter-opt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .table-filter-bar .filter-opt:hover { background: #f0f6ff; }
+  .table-filter-bar .filter-opt input { margin: 0; }
+  .table-filter-bar .filter-clear {
+    display: block;
+    width: 100%;
+    margin: 0 0 4px;
+    padding: 3px 0;
+    font-size: 12px;
+    text-align: center;
+    border: none;
+    border-bottom: 1px solid #eaecef;
+    background: transparent;
+    color: #0366d6;
+    cursor: pointer;
+  }
+  .table-filter-bar .filter-clear:hover { background: #e6f0ff; }
   .table-filter-bar .filter-count { color: #6a737d; margin-left: auto; }
   .table-filter-bar button {
     padding: 3px 10px;
@@ -1594,6 +1757,16 @@ ${sectionsHtml}
     var tocEl = document.getElementById('toc');
     var sections = Array.from(document.querySelectorAll('.doc-section'));
 
+    // 滚动到目标：手动计算 scrollTop 以兼容正文 zoom 缩放（scrollIntoView 在 zoom 下会定位偏差）
+    function scrollToTarget(el) {
+      var scrollEl = document.scrollingElement || document.documentElement;
+      var current = window.pageYOffset || scrollEl.scrollTop || document.documentElement.scrollTop || 0;
+      var margin = 0;
+      try { margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0; } catch (e) {}
+      var top = el.getBoundingClientRect().top + current - margin;
+      window.scrollTo({ top: top, behavior: 'smooth' });
+    }
+
     function switchTo(docIdx) {
       active = docIdx;
       sections.forEach(function(sec) {
@@ -1706,7 +1879,7 @@ ${sectionsHtml}
         fileA.addEventListener('click', function(e) {
           e.preventDefault();
           switchTo(docIdx);
-          sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          scrollToTarget(sec);
         });
         group.appendChild(fileA);
 
@@ -1726,7 +1899,7 @@ ${sectionsHtml}
           a.addEventListener('click', function(e) {
             e.preventDefault();
             switchTo(docIdx);
-            setTimeout(function() { h.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 30);
+            setTimeout(function() { scrollToTarget(h); }, 30);
           });
           li.appendChild(a);
           sub.appendChild(li);
@@ -2025,8 +2198,15 @@ ${sectionsHtml}
   })();
 </script>
 <script>
-  // ===== 表格字段筛选：对 data-filterable 表格按字段下拉筛选 =====
+  // ===== 表格字段筛选：对 data-filterable 表格按字段多选筛选 =====
   (function() {
+    // 点击筛选栏以外区域时收起下拉面板
+    document.addEventListener('click', function(e) {
+      var inside = e.target.closest ? e.target.closest('.filter-multi') : null;
+      document.querySelectorAll('.filter-multi.open').forEach(function(m) {
+        if (m !== inside) m.classList.remove('open');
+      });
+    });
     function initFilters() {
       document.querySelectorAll('table[data-filterable]').forEach(function(table) {
         if (table._mmFilterInit) return;
@@ -2052,17 +2232,30 @@ ${sectionsHtml}
         var bar = document.createElement('div');
         bar.className = 'table-filter-bar';
 
-        var selects = [];
+        var multis = [];
         cols.forEach(function(col, i) {
           var field = document.createElement('span');
           field.className = 'filter-field';
           var lab = document.createElement('label');
           lab.textContent = labels[i] + '：';
-          var sel = document.createElement('select');
-          var allOpt = document.createElement('option');
-          allOpt.value = '';
-          allOpt.textContent = '全部';
-          sel.appendChild(allOpt);
+
+          var multi = document.createElement('span');
+          multi.className = 'filter-multi';
+
+          var trigger = document.createElement('span');
+          trigger.className = 'filter-multi-trigger';
+          trigger.textContent = '全部';
+
+          var panel = document.createElement('span');
+          panel.className = 'filter-multi-panel';
+
+          var clearBtn = document.createElement('button');
+          clearBtn.type = 'button';
+          clearBtn.className = 'filter-clear';
+          clearBtn.textContent = '清空';
+          panel.appendChild(clearBtn);
+
+          var checkboxes = [];
           var vals = Object.keys(optionSets[i]);
           vals.sort(function(a, b) {
             var na = Number(a), nb = Number(b);
@@ -2070,15 +2263,23 @@ ${sectionsHtml}
             return String(a).localeCompare(String(b), 'zh-CN');
           });
           vals.forEach(function(v) {
-            var opt = document.createElement('option');
-            opt.value = v;
-            opt.textContent = v;
-            sel.appendChild(opt);
+            var opt = document.createElement('label');
+            opt.className = 'filter-opt';
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.value = v;
+            opt.appendChild(cb);
+            opt.appendChild(document.createTextNode(' ' + v));
+            panel.appendChild(opt);
+            checkboxes.push(cb);
           });
+
+          multi.appendChild(trigger);
+          multi.appendChild(panel);
           field.appendChild(lab);
-          field.appendChild(sel);
+          field.appendChild(multi);
           bar.appendChild(field);
-          selects.push(sel);
+          multis.push({ col: col, multi: multi, trigger: trigger, panel: panel, checkboxes: checkboxes, clearBtn: clearBtn });
         });
 
         var countEl = document.createElement('span');
@@ -2093,22 +2294,45 @@ ${sectionsHtml}
         bar.appendChild(countEl);
 
         function apply() {
-          var active = {};
-          selects.forEach(function(sel, i) { if (sel.value !== '') active[cols[i]] = sel.value; });
           var shown = 0;
           dataRows.forEach(function(tr) {
             var match = true;
-            for (var k in active) {
-              if ((tr.getAttribute('data-f' + k) || '').trim() !== active[k]) { match = false; break; }
+            for (var i = 0; i < multis.length; i++) {
+              var m = multis[i];
+              var activeVals = m.checkboxes.filter(function(cb) { return cb.checked; }).map(function(cb) { return cb.value; });
+              if (!activeVals.length) continue;
+              var v = (tr.getAttribute('data-f' + m.col) || '').trim();
+              if (activeVals.indexOf(v) === -1) { match = false; break; }
             }
             tr.style.display = match ? '' : 'none';
             if (match) shown++;
           });
           countEl.textContent = '共 ' + shown + ' 条';
+          multis.forEach(function(m) {
+            var n = m.checkboxes.filter(function(cb) { return cb.checked; }).length;
+            m.trigger.textContent = n === 0 ? '全部' : '已选 ' + n + ' 项';
+          });
         }
-        selects.forEach(function(sel) { sel.addEventListener('change', apply); });
+
+        multis.forEach(function(m) {
+          m.trigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var isOpen = m.multi.classList.contains('open');
+            document.querySelectorAll('.filter-multi.open').forEach(function(x) { x.classList.remove('open'); });
+            if (!isOpen) m.multi.classList.add('open');
+          });
+          m.panel.addEventListener('click', function(e) { e.stopPropagation(); });
+          m.checkboxes.forEach(function(cb) { cb.addEventListener('change', apply); });
+          m.clearBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            m.checkboxes.forEach(function(cb) { cb.checked = false; });
+            apply();
+          });
+        });
         resetBtn.addEventListener('click', function() {
-          selects.forEach(function(sel) { sel.value = ''; });
+          multis.forEach(function(m) {
+            m.checkboxes.forEach(function(cb) { cb.checked = false; });
+          });
           apply();
         });
 

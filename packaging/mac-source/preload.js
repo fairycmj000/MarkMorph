@@ -30,7 +30,7 @@ contextBridge.exposeInMainWorld('api', {
   resetBackground: () => ipcRenderer.invoke('reset-background'),
   readMdFile: (filePath) => ipcRenderer.invoke('read-md-file', filePath),
   writeMdFile: (filePath, content) => ipcRenderer.invoke('write-md-file', { filePath, content }),
-  onOpenFile: (cb) => ipcRenderer.on('open-file', (_event, filePath) => cb(filePath)),
+  onOpenFile: (cb) => ipcRenderer.on('open-file', (_event, filePaths) => cb(filePaths)),
   watchFile: (filePath) => ipcRenderer.invoke('watch-file', filePath),
   unwatchFile: (filePath) => ipcRenderer.invoke('unwatch-file', filePath),
   onFileChanged: (cb) => ipcRenderer.on('file-changed', (_event, filePath) => cb(filePath))

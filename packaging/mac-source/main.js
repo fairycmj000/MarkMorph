@@ -12,15 +12,16 @@ const { convertDocxToMarkdown, convertDocxToHtml } = require('./docx2md');
 const MERMAID_SRC = pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
 
 let mainWindow = null;
-let pendingOpenPath = null; // 双击 .md 关联打开时，待预览的文件绝对路径
+let pendingOpenPaths = []; // 双击 .md 关联打开时，待预览的文件绝对路径（可同时选中多个）
 
-// 从命令行参数中提取 markdown 文件路径（文件关联 / 拖到 exe 打开时由系统传入）
-function extractMdPath(args) {
+// 从命令行参数中提取 markdown 文件路径（文件关联 / 拖到 exe 打开时由系统传入，可同时选中多个）
+function extractMdPaths(args) {
+  const paths = [];
   for (const a of args || []) {
     if (!a || a.startsWith('-')) continue;
-    if (/\.(md|markdown|mdown|mkd)$/i.test(a)) return a;
+    if (/\.(md|markdown|mdown|mkd)$/i.test(a)) paths.push(a);
   }
-  return null;
+  return paths;
 }
 
 function createWindow() {
@@ -38,10 +39,10 @@ function createWindow() {
     }
   });
   const indexPath = path.join(__dirname, 'renderer', 'index.html');
-  if (pendingOpenPath) {
-    // 首次启动即带着文件：通过 query 把路径交给渲染层，自动进入 HTML 预览
-    win.loadFile(indexPath, { query: { open: pendingOpenPath } });
-    pendingOpenPath = null;
+  if (pendingOpenPaths && pendingOpenPaths.length) {
+    // 首次启动即带着文件：通过 query 把路径数组交给渲染层，自动进入多文件分屏预览
+    win.loadFile(indexPath, { query: { open: JSON.stringify(pendingOpenPaths) } });
+    pendingOpenPaths = [];
   } else {
     win.loadFile(indexPath);
   }
@@ -55,11 +56,11 @@ if (!gotLock) {
   app.quit();
 } else {
   app.on('second-instance', (event, argv) => {
-    const filePath = extractMdPath(argv);
-    if (filePath && mainWindow && !mainWindow.isDestroyed()) {
+    const paths = extractMdPaths(argv);
+    if (paths.length && mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
-      mainWindow.webContents.send('open-file', filePath);
+      mainWindow.webContents.send('open-file', paths);
     }
   });
 
@@ -67,13 +68,13 @@ if (!gotLock) {
   app.on('open-file', (event, filePath) => {
     event.preventDefault();
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('open-file', filePath);
+      mainWindow.webContents.send('open-file', [filePath]);
     } else {
-      pendingOpenPath = filePath;
+      pendingOpenPaths = [filePath];
     }
   });
 
-  pendingOpenPath = extractMdPath(process.argv.slice(1));
+  pendingOpenPaths = extractMdPaths(process.argv.slice(1));
 
   app.whenReady().then(createWindow);
   app.on('window-all-closed', () => app.quit());

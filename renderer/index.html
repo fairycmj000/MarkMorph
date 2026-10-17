@@ -69,9 +69,15 @@
     width: 160px;
     padding: 12px;
     height: 100vh;
-    justify-content: center;
+    justify-content: flex-start;
+    overflow-y: auto;
     transform: none !important;
   }
+  /* 卡片超出可视高度时可滚动查看；未超出时首尾自动留白保持垂直居中 */
+  body.has-preview .card:first-child { margin-top: auto; }
+  body.has-preview .card:last-child { margin-bottom: auto; }
+  body.has-preview .container::-webkit-scrollbar { width: 5px; }
+  body.has-preview .container::-webkit-scrollbar-thumb { background: rgba(180,130,60,0.4); border-radius: 3px; }
 
   .card {
     background: rgba(255,255,255,0.2);
@@ -792,19 +798,20 @@
     </div>
     <div class="help-body">
       <h2>最新更新</h2>
+      <p><b>核心功能概述</b></p>
       <ul>
+        <li><b>md 文件直接打开</b>：完成文件关联后，双击 .md（或右键 → 打开方式 → MarkMorph，可一次选中多个）自动启动并直接进入<b>分屏预览</b>；已运行时再次双击加载到当前窗口</li>
         <li><b>新增 Word → MD 入口</b>：拖入或点选 .docx，无损转换为 Markdown（标题、表格、嵌入的 Excel 电子表格渲染为表格、图片提取到 assets 文件夹、超链接保留），预览确认后「下载 MD」落盘</li>
-        <li><b>新增 Word → HTML 入口</b>：拖入或点选 .docx，无损转换为 HTML（图片内联、单文件自包含），预览确认后「下载 HTML」保存并在浏览器打开</li>
-        <li><b>双击 .md 文件直接打开</b>：完成文件关联后，双击 .md（或右键 → 打开方式 → MarkMorph）自动启动并直接以 HTML 全屏预览；已运行时再次双击会加载到当前窗口</li>
-        <li><b>缩放按钮移到「编辑」同行</b>：缩放 / 重置按钮与「编辑」同一行，中间显示当前比例（50%–300%，步进 10%）；仅缩放正文区，左侧导航栏不变</li>
-        <li><b>编辑支持「取消」</b>：编辑后可点「取消」放弃本次修改、不提交；分屏编辑同样支持独立取消</li>
-        <li><b>多文件布局切换 + 拖动分隔线</b>：一行 8 格 ↔ 上下两行各 4 格；一行布局可<b>左右拖动分隔线</b>调整分屏宽度，两行布局可<b>上下拖动分隔线</b>调整高度</li>
-        <li><b>图片 / 流程图放大查看与单独下载</b>：点击图片 / 流程图全屏放大，滚轮缩放、拖动平移；点底部「下载」单独下载（图片原格式 / 流程图 .svg）</li>
-        <li><b>多文件分屏预览 + 合并下载</b>：多个 Markdown 并列分屏预览，可编辑保存；合并下载支持 HTML / PDF / Word</li>
-        <li><b>预览内编辑并保存</b>：单文件与多文件分屏均可在预览内编辑并保存回源 .md 文件</li>
-        <li><b>外部编辑冲突提示</b>：预览期间源文件被其他程序修改时弹出提示，未保存的本地编辑不提交、自动回退只读</li>
+        <li><b>新增 Word → HTML 入口</b>：拖入或点选 .docx，无损转换为 HTML（图片内联、单文件自包含），预览确认后「下载 HTML」保存并在浏览器打开；针对表格内容自动添加<b>筛选项</b></li>
+        <li><b>多文件分屏预览 + 合并下载</b>：多个 Markdown 并列分屏预览，可编辑保存；合并下载支持 HTML / PDF / Word；布局支持一行 8 格 ↔ 上下两行各 4 格，均等宽 / 等高铺满</li>
+        <li><b>预览内编辑并保存</b>：单文件与多文件分屏均可在预览内编辑并保存回源 .md 文件，支持「取消」放弃修改；外部编辑冲突时提示并自动回退只读，不提交未保存的编辑</li>
         <li><b>明亮 / 黑暗主题 + 全屏</b>：预览面板支持 🌙/☀️ 主题切换与全屏模式（全屏隐藏上传入口）</li>
-        <li>首页四个入口改为 <b>2×2 自适应布局</b>，随窗口大小自动缩放</li>
+      </ul>
+      <p><b>其他界面与查看优化</b></p>
+      <ul>
+        <li><b>缩放按钮移到「编辑」同行</b>：缩放 / 重置按钮与「编辑」同一行，中间显示当前比例（50%–300%，步进 10%）；仅缩放正文区，左侧导航栏不变</li>
+        <li><b>图片 / 流程图放大查看与单独下载</b>：点击图片 / 流程图全屏放大，滚轮缩放、拖动平移；点底部「下载」单独下载（图片原格式 / 流程图 .svg）</li>
+        <li>首页入口改为 <b>2×2 自适应布局</b>，随窗口大小自动缩放</li>
         <li>HTML 查看 <b>导航栏优化</b>：折叠 / 展开、拖动调整宽度、目录自动高亮跟随</li>
       </ul>
 
@@ -823,9 +830,9 @@
       <h2>二、直接打开 .md 文件</h2>
       <p>安装并完成文件关联后，<b>双击 <code>.md</code> 文件</b>（或右键 → 打开方式 → MarkMorph）：</p>
       <ul>
-        <li>自动启动 MarkMorph，并直接以 <b>HTML 格式预览</b>该文件</li>
+        <li>自动启动 MarkMorph，并直接进入<b>分屏预览</b>（默认走「多文件」入口）</li>
+        <li>可<b>一次选中多个</b> <code>.md</code> 文件，同时分屏并列查看</li>
         <li>双击打开默认进入<b>全屏预览</b>（隐藏首页入口），点 ⛶ 退出全屏</li>
-        <li>预览面板顶部按钮变为「下载 HTML」，点击即可保存为 <code>.html</code></li>
         <li>若已运行，再次双击会把内容加载到当前窗口</li>
       </ul>
 
@@ -834,7 +841,7 @@
       <ul>
         <li>把多个 <code>.md</code> 文件拖入「多文件」入口（最多 8 个），自动进入<b>全屏分屏预览</b></li>
         <li>每个分屏都可<b>编辑并保存 / 取消</b>回源文件；<b>拖动分屏标题</b>调整顺序，点分屏右上角 ✕ 关闭</li>
-        <li>点顶部布局切换按钮（▬/▦），在<b>一行 8 格</b>与<b>上下两行各 4 格</b>间切换；一行布局可<b>左右拖动分隔线</b>调整分屏宽度，两行布局可<b>上下拖动分隔线</b>调整高度</li>
+        <li>点顶部布局切换按钮（▬/▦），在<b>一行 8 格</b>与<b>上下两行各 4 格</b>间切换，均等宽 / 等高铺满</li>
         <li>点右上角「合并下载」：<b>勾选</b>要合并的文件、<b>拖动排序</b>、<b>双击文件名重命名</b>，再选择格式（HTML / PDF / Word）</li>
         <li>预览中可点「+ 添加文件」继续追加 .md 文件（不超过 8 个）</li>
       </ul>
@@ -1841,8 +1848,13 @@
   // 打开多文件分屏预览（默认全屏）
   async function openMultiPreview(fileList) {
     if (!fileList || !fileList.length) return;
-    let items = await filesToItems(Array.from(fileList));
-    if (items.length === 0) {
+    const items = await filesToItems(Array.from(fileList));
+    openMultiItems(items);
+  }
+
+  // 直接以已解析的文件项打开多文件分屏（文件选择入口、.md 关联打开共用）
+  function openMultiItems(items) {
+    if (!items || items.length === 0) {
       setStatus(statusMerge, 'error', '请选择 .md 文件');
       return;
     }
@@ -1884,12 +1896,7 @@
       const bottomRow = document.createElement('div');
       bottomRow.className = 'grid-row bottom';
       bottomRow.style.gridTemplateColumns = 'repeat(' + g.cols + ', 1fr)';
-      const divider = document.createElement('div');
-      divider.className = 'row-divider';
-      divider.id = 'rowDivider';
-      divider.title = '拖动调整上下两行高度';
-      previewGrid.append(topRow, divider, bottomRow);
-      attachRowDivider(divider, topRow, bottomRow);
+      previewGrid.append(topRow, bottomRow);
 
       const half = Math.ceil(n / 2);
       files.forEach((f, i) => {
@@ -1992,89 +1999,11 @@
     }
   }
 
-  // 2行布局：拖动上下两行之间的边界线，调整两行高度
-  function attachRowDivider(divider, topRow, bottomRow) {
-    divider.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      divider.classList.add('dragging');
-      const grid = previewGrid;
-      const pad = 8;
-      function onMove(ev) {
-        const gridRect = grid.getBoundingClientRect();
-        const avail = gridRect.height - pad * 2 - divider.offsetHeight;
-        if (avail <= 0) return;
-        let topH = ev.clientY - gridRect.top - pad;
-        topH = Math.min(avail - 80, Math.max(80, topH));
-        const ratio = topH / avail;
-        topRow.style.flexGrow = ratio;
-        bottomRow.style.flexGrow = (1 - ratio);
-      }
-      function onUp() {
-        divider.classList.remove('dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        document.body.style.cursor = '';
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-      document.body.style.cursor = 'row-resize';
-    });
-  }
-
-  // 1行×8格：在相邻 pane 之间插入纵向分隔线（可拖动调整分屏宽度）
+  // 1行×N格：等宽铺满（已禁用拖动分隔线调整宽度/高度）
   function buildColRow(ordered) {
     const frag = document.createDocumentFragment();
-    ordered.forEach((p, i) => {
-      if (i > 0) {
-        const divider = document.createElement('div');
-        divider.className = 'col-divider';
-        divider.title = '拖动调整分屏宽度';
-        attachColDivider(divider, ordered[i - 1], p);
-        frag.appendChild(divider);
-      }
-      frag.appendChild(p);
-    });
+    ordered.forEach((p) => frag.appendChild(p));
     return frag;
-  }
-
-  // 让所有分屏以当前像素宽度作为 flex-grow，便于后续按比例换算
-  function normalizeColWidths() {
-    previewGrid.querySelectorAll('.pane').forEach(p => {
-      p.style.flexGrow = p.getBoundingClientRect().width;
-    });
-  }
-
-  // 拖动纵向分隔线：调整左右两个分屏的宽度
-  function attachColDivider(divider, leftPane, rightPane) {
-    divider.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
-      e.preventDefault();
-      divider.classList.add('dragging');
-      normalizeColWidths();
-      const startX = e.clientX;
-      const leftW = leftPane.getBoundingClientRect().width;
-      const rightW = rightPane.getBoundingClientRect().width;
-      const minW = 80;
-      function onMove(ev) {
-        const dx = ev.clientX - startX;
-        let nl = leftW + dx;
-        let nr = rightW - dx;
-        if (nl < minW) { nl = minW; nr = leftW + rightW - nl; }
-        if (nr < minW) { nr = minW; nl = leftW + rightW - nl; }
-        leftPane.style.flexGrow = nl;
-        rightPane.style.flexGrow = nr;
-      }
-      function onUp() {
-        divider.classList.remove('dragging');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-        document.body.style.cursor = '';
-      }
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-      document.body.style.cursor = 'col-resize';
-    });
   }
 
   // 分屏 pane：编辑 / 保存
@@ -2617,42 +2546,35 @@
     document.getElementById('watermark').textContent = 'MarkMorph by cmj';
   });
 
-  // ====== 文件关联自动打开：双击 .md → 直接进入「转 HTML」预览 ======
-  const statusHtml = document.getElementById('statusHtml');
+  // ====== 文件关联自动打开：双击 .md → 默认进入多文件分屏预览（可一次打开多个） ======
 
-  async function openFileByPath(filePath) {
-    if (!filePath) return;
-    const result = await window.api.readMdFile(filePath);
-    if (!result || result.error || !result.content) {
-      setStatus(statusHtml, 'error', '无法读取文件：' + (result && result.error ? result.error : filePath));
-      return;
+  // 按绝对路径批量读取 .md 并打开多文件分屏预览
+  async function openFilesByPaths(filePaths) {
+    if (!filePaths || !filePaths.length) return;
+    const items = [];
+    for (const p of filePaths) {
+      try {
+        const res = await window.api.readMdFile(p);
+        if (res && !res.error && res.content != null) {
+          items.push({ name: res.filename || p, content: res.content, srcPath: res.srcPath || p });
+        }
+      } catch (e) {}
     }
-    setStatus(statusHtml, 'loading', '<div class="spinner"></div> 加载预览...');
-    try {
-      const html = await window.api.previewMd(result.content, result.srcPath);
-      setPreviewMode('single');
-      loadFrame(previewFrame, html);
-      previewFilename.textContent = result.filename;
-      downloadBtn.textContent = '下载 HTML';
-      previewPanel.classList.add('open');
-      document.body.classList.add('has-preview');
-      enterFullscreen();   // 双击 .md 打开默认全屏预览
-      setStatus(statusHtml, 'success', '预览已就绪，点击「下载 HTML」保存到指定目录');
-      previewPanel._pendingTask = { type: 'html', content: result.content, filename: result.filename, srcPath: result.srcPath, statusEl: statusHtml };
-      updateWatch();
-    } catch (err) {
-      setStatus(statusHtml, 'error', err.message);
-    }
+    openMultiItems(items);
   }
 
-  // 已运行实例收到第二次双击的文件
+  // 已运行实例收到再次打开的文件（数组）
   if (window.api && typeof window.api.onOpenFile === 'function') {
-    window.api.onOpenFile((filePath) => openFileByPath(filePath));
+    window.api.onOpenFile((filePaths) => openFilesByPaths(Array.isArray(filePaths) ? filePaths : [filePaths]));
   }
 
-  // 首次启动：从 query 参数读取待打开文件路径
-  const openQuery = new URLSearchParams(location.search).get('open');
-  if (openQuery) openFileByPath(openQuery);
+  // 首次启动：从 query 参数读取待打开文件路径（JSON 数组，兼容旧的单路径）
+  const openRaw = new URLSearchParams(location.search).get('open');
+  if (openRaw) {
+    let paths;
+    try { paths = JSON.parse(openRaw); } catch (e) { paths = [openRaw]; }
+    openFilesByPaths(Array.isArray(paths) ? paths : [paths]);
+  }
 
   // ====== 使用说明弹窗 ======
   const helpOverlay = document.getElementById('helpOverlay');

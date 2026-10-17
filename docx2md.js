@@ -936,6 +936,8 @@ async function renderHtmlTable(tblNode, ctx) {
       if (label) { filterCols.push(c); filterLabels.push(label); }
     }
   }
+  // 筛选项列数上限 25 列（超出取前 25 列）
+  if (filterCols.length > 25) { filterCols.length = 25; filterLabels.length = 25; }
   const dataRowCount = headerIdx >= 0 ? grid.length - headerIdx - 1 : 0;
   const filterable = dataRowCount > 15 && filterCols.length > 0;
 
@@ -1136,6 +1138,8 @@ function renderXlsxHtmlTable(rows, merges) {
       if (grid[headerIdx][c] !== '') { filterCols.push(c); filterLabels.push(grid[headerIdx][c]); }
     }
   }
+  // 筛选项列数上限 25 列（超出取前 25 列）
+  if (filterCols.length > 25) { filterCols.length = 25; filterLabels.length = 25; }
   const dataRowCount = headerIdx >= 0 ? H - headerIdx - 1 : 0;
   const filterable = dataRowCount > 15 && filterCols.length > 0;
 
