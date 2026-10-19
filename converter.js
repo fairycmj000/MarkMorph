@@ -758,6 +758,9 @@ ${bodyHtml}
       });
     }
 
+    // 渲染前清空已有目录：下载后的 HTML 已把目录内联，再次打开时脚本会再跑一遍，
+    // 若不先清空会重复追加导致目录翻倍
+    toc.innerHTML = '';
     renderToc(buildTocTree().children, toc);
 
     // 全部展开 / 全部收起（单按钮切换，位于「目录」右侧）
