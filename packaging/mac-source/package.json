@@ -1,6 +1,6 @@
 {
   "name": "md2pdf-electron",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Markdown to PDF converter",
   "main": "main.js",
   "scripts": {
