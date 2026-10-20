@@ -838,19 +838,12 @@
     </div>
     <div class="help-body">
       <h2>最新更新</h2>
-      <p><b>多文件分屏增强</b></p>
+      <p><b>编辑与替换支持撤销 / 重做</b></p>
       <ul>
-        <li><b>每个分屏搜索 + 替换</b>：点分屏 🔍（或 Ctrl+F）呼出搜索/替换框，可直接定位与替换；只读分屏点「替换 / 全部替换」会自动切入编辑态再执行</li>
-        <li><b>分屏单独下载</b>：每个分屏新增「下载」按钮，可单独把该文件下载为 PDF / HTML / Word，无需合并</li>
-        <li><b>.md 追加打开</b>：已有多文件分屏时，双击 / 右键打开 .md，或从「多文件」入口继续上传，都会在现有分屏基础上<b>追加</b>（按路径去重、上限 8 个），不再关闭已有文件；右键一次选中多个 .md 会全部进入分屏</li>
-      </ul>
-      <p><b>Word 转换增强</b></p>
-      <ul>
-        <li><b>Word → MD / HTML 支持编辑转换结果</b>：预览后可点「编辑」修改转换结果再下载；编辑后的下载为<b>自包含</b>内容（图片内联，无需 assets 文件夹）</li>
-      </ul>
-      <p><b>下载体验优化</b></p>
-      <ul>
-        <li><b>下载完成一键定位</b>：任意转换下载成功后按钮变为「下载完成 ✓」，点击即可在文件管理器中定位到该文件</li>
+        <li><b>撤销 / 重做快捷键</b>：编辑框内 <b>Ctrl+Z</b> 撤销、<b>Ctrl+Y</b>（或 Ctrl+Shift+Z）重做；连续输入自动合并为一步</li>
+        <li><b>替换可撤销</b>：搜索定位后的「替换当前 / 全部替换」均可一键撤销</li>
+        <li><b>插图可撤销</b>：粘贴或插入图片后同样可撤销</li>
+        <li><b>多文件分屏同样支持</b>：每个分屏的编辑框都支持撤销 / 重做</li>
       </ul>
 
       <h2>一、快速上手</h2>
@@ -1696,7 +1689,9 @@
     const { start, end } = searchMatches[searchIndex];
     const rep = replaceInput.value;
     const v = editor.value;
+    undoPush(editor, false);
     editor.value = v.slice(0, start) + rep + v.slice(end);
+    undoSync(editor);
     const cursor = start + rep.length;
     computeMatches();
     if (searchMatches.length) {
@@ -1724,7 +1719,9 @@
     const before = editor.value;
     const re = new RegExp(escapeRegExp(q), 'gi');
     const count = (before.match(re) || []).length;
+    undoPush(editor, false);
     editor.value = before.replace(re, () => rep);
+    undoSync(editor);
     computeMatches();
     if (searchMatches.length) navigate(1);
     else searchCount.textContent = '已替换 ' + count + ' 处';
@@ -1806,6 +1803,92 @@
     else { searchMatches = []; searchIndex = -1; searchCount.textContent = ''; }
   });
 
+  // ====== 编辑框撤销/重做（自定义栈：覆盖手动编辑、替换、插图） ======
+  const undoState = new WeakMap();   // editor -> { undo:[], redo:[], lastValue, lastAt }
+  const UNDO_MAX = 200;
+
+  function undoStateOf(editor) {
+    let st = undoState.get(editor);
+    if (!st) { st = { undo: [], redo: [], lastValue: editor.value, lastAt: 0 }; undoState.set(editor, st); }
+    return st;
+  }
+
+  function undoReset(editor) {
+    undoState.set(editor, { undo: [], redo: [], lastValue: editor.value, lastAt: 0 });
+  }
+
+  // 入栈一步「变更前快照」；coalesce=true 且与上一步间隔 <800ms 时合并为一步
+  function undoPush(editor, coalesce) {
+    const st = undoStateOf(editor);
+    const now = Date.now();
+    if (!(coalesce && st.undo.length && (now - st.lastAt) < 800)) {
+      st.undo.push(st.lastValue);
+      if (st.undo.length > UNDO_MAX) st.undo.shift();
+      st.redo = [];
+    }
+    st.lastAt = now;
+  }
+
+  // 宏操作（替换/插图）直接改 value 后调用：同步当前值并阻断与下一步输入的合并
+  function undoSync(editor) {
+    const st = undoStateOf(editor);
+    st.lastValue = editor.value;
+    st.lastAt = 0;
+  }
+
+  // 撤销/重做后刷新搜索命中，避免旧位置失效
+  function refreshSearchAfterUndo() {
+    if (searchActive && searchInput.value) runSearch();
+    else { searchMatches = []; searchIndex = -1; searchCount.textContent = ''; }
+  }
+
+  function undoApply(editor) {
+    const st = undoStateOf(editor);
+    if (!st.undo.length) return false;
+    const pane = editor.closest ? editor.closest('.pane') : null;
+    if (pane) activePane = pane;
+    st.redo.push(editor.value);
+    editor.value = st.undo.pop();
+    st.lastValue = editor.value;
+    st.lastAt = 0;
+    refreshSearchAfterUndo();
+    return true;
+  }
+
+  function redoApply(editor) {
+    const st = undoStateOf(editor);
+    if (!st.redo.length) return false;
+    const pane = editor.closest ? editor.closest('.pane') : null;
+    if (pane) activePane = pane;
+    st.undo.push(editor.value);
+    editor.value = st.redo.pop();
+    st.lastValue = editor.value;
+    st.lastAt = 0;
+    refreshSearchAfterUndo();
+    return true;
+  }
+
+  // 给编辑框挂撤销/重做（单文件 previewEditor 与每个分屏 pane-editor 共用）
+  function attachUndo(editor) {
+    undoStateOf(editor);
+    editor.addEventListener('input', () => {
+      const st = undoStateOf(editor);
+      if (editor.value === st.lastValue) return;
+      undoPush(editor, true);
+      st.lastValue = editor.value;
+    });
+    editor.addEventListener('beforeinput', (e) => {
+      if (e.inputType === 'historyUndo') { e.preventDefault(); undoApply(editor); }
+      else if (e.inputType === 'historyRedo') { e.preventDefault(); redoApply(editor); }
+    });
+    editor.addEventListener('keydown', (e) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const k = (e.key || '').toLowerCase();
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undoApply(editor); }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redoApply(editor); }
+    });
+  }
+
   // ====== 图片插入（直接粘贴 / 点击选择本地文件） ======
   let imageInsertTarget = null;   // 当前要把图片插入到哪个编辑框
 
@@ -1813,7 +1896,9 @@
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const value = textarea.value;
+    undoPush(textarea, false);
     textarea.value = value.slice(0, start) + text + value.slice(end);
+    undoSync(textarea);
     const pos = start + text.length;
     textarea.selectionStart = textarea.selectionEnd = pos;
     textarea.focus();
@@ -1859,6 +1944,7 @@
 
   // 单文件编辑框：粘贴图片
   previewEditor.addEventListener('paste', (e) => handlePasteImages(e, previewEditor));
+  attachUndo(previewEditor);
   // 单文件「插入图片」按钮 → 打开文件选择
   insertImageBtn.addEventListener('click', () => {
     imageInsertTarget = previewEditor;
@@ -1883,6 +1969,7 @@
       closeSearch();
       singleEditing = true;
       previewEditor.value = task.content;
+      undoReset(previewEditor);
       previewFrame.hidden = true;
       previewEditor.hidden = false;
       editBtn.textContent = '保存';
@@ -2513,6 +2600,7 @@
     editor.spellcheck = false;
     editor.hidden = true;
     editor.addEventListener('paste', (e) => handlePasteImages(e, editor));
+    attachUndo(editor);
 
     // 「插图」→ 选择本地图片插入到本 pane 的编辑框光标处
     img.addEventListener('click', () => {
@@ -2564,6 +2652,7 @@
     const editBtnEl = pane.querySelector('.pane-btn');
     if (!editor.hidden) return;
     editor.value = pane._file.content;
+    undoReset(editor);
     iframe.hidden = true;
     editor.hidden = false;
     editBtnEl.textContent = '保存';
