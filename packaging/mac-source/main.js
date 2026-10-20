@@ -57,10 +57,14 @@ if (!gotLock) {
 } else {
   app.on('second-instance', (event, argv) => {
     const paths = extractMdPaths(argv);
-    if (paths.length && mainWindow && !mainWindow.isDestroyed()) {
+    if (!paths.length) return;
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
       mainWindow.webContents.send('open-file', paths);
+    } else {
+      // 窗口尚未就绪（冷启动即多实例逐文件触发）→ 先缓存，createWindow 时再带上
+      pendingOpenPaths.push(...paths);
     }
   });
 
@@ -178,6 +182,26 @@ ipcMain.handle('open-external', async (_, url) => {
     return { ok: true };
   }
   return { ok: false };
+});
+
+// 在文件管理器中定位并选中指定文件（下载完成后「下载完成」点击直达）
+ipcMain.handle('open-file-location', async (_, filePath) => {
+  try {
+    if (typeof filePath !== 'string' || !filePath) return { ok: false };
+    if (fs.existsSync(filePath)) {
+      shell.showItemInFolder(filePath);
+      return { ok: true };
+    }
+    // 文件不存在时退化为打开其所在目录
+    const dir = path.dirname(filePath);
+    if (fs.existsSync(dir)) {
+      shell.openPath(dir);
+      return { ok: true };
+    }
+    return { ok: false };
+  } catch (e) {
+    return { ok: false };
+  }
 });
 
 // 从 markdown 文件路径推导所在目录（用于解析相对图片路径）
@@ -1056,9 +1080,10 @@ ipcMain.handle('convert-docx-to-md', async (event, srcPath) => {
     safeLog('convert-docx-to-md handler called, srcPath:', srcPath);
     const { markdown, images, stats } = await convertDocxToMarkdown(srcPath);
     const baseName = path.basename(srcPath, path.extname(srcPath));
-    const html = buildHtml(inlineDocxImages(markdown, images), '');
+    const inlineMarkdown = inlineDocxImages(markdown, images);
+    const html = buildHtml(inlineMarkdown, '');
     safeLog('convert-docx-to-md done, stats:', stats);
-    return { html, baseName, stats };
+    return { html, baseName, stats, inlineMarkdown };
   } catch (error) {
     safeLog('convert-docx-to-md error:', error);
     return { error: error && error.message ? error.message : String(error) };
@@ -1081,11 +1106,20 @@ ipcMain.handle('convert-docx-to-html', async (event, srcPath) => {
 });
 
 // 保存：Word (.docx) → Markdown（重新转换取最新，写 .md + assets/ 图片）
-ipcMain.handle('save-docx-md', async (event, srcPath) => {
+ipcMain.handle('save-docx-md', async (event, srcPath, editedContent) => {
   try {
     safeLog('save-docx-md handler called, srcPath:', srcPath);
-    const { markdown, images } = await convertDocxToMarkdown(srcPath);
     const baseName = path.basename(srcPath, path.extname(srcPath));
+
+    // 传了 editedContent 表示用户编辑过转换结果：直接写编辑后的内容（图片已内联 base64）
+    let markdown, images = [];
+    if (editedContent != null && editedContent !== '') {
+      markdown = editedContent;
+    } else {
+      const r = await convertDocxToMarkdown(srcPath);
+      markdown = r.markdown;
+      images = r.images;
+    }
 
     const { filePath, canceled } = await dialog.showSaveDialog({
       defaultPath: baseName + '.md',
@@ -1095,7 +1129,7 @@ ipcMain.handle('save-docx-md', async (event, srcPath) => {
 
     fs.writeFileSync(filePath, markdown, 'utf-8');
 
-    // 图片写入同目录 assets/ 子文件夹（md 内以 ./assets/ 相对路径引用）
+    // 图片写入同目录 assets/ 子文件夹（md 内以 ./assets/ 相对路径引用；编辑后无图片列表则跳过）
     if (images.length) {
       const assetsDir = path.join(path.dirname(filePath), 'assets');
       fs.mkdirSync(assetsDir, { recursive: true });
@@ -1113,11 +1147,19 @@ ipcMain.handle('save-docx-md', async (event, srcPath) => {
 });
 
 // 保存：Word (.docx) → HTML（图片内联 base64，生成单文件自包含 HTML 并在浏览器打开）
-ipcMain.handle('save-docx-html', async (event, srcPath) => {
+ipcMain.handle('save-docx-html', async (event, srcPath, editedHtml) => {
   try {
     safeLog('save-docx-html handler called, srcPath:', srcPath);
-    const { markdown, images } = await convertDocxToHtml(srcPath);
     const baseName = path.basename(srcPath, path.extname(srcPath));
+
+    // 传了 editedHtml 表示用户编辑过 HTML 源码：直接写编辑后的内容
+    let html;
+    if (editedHtml != null && editedHtml !== '') {
+      html = editedHtml;
+    } else {
+      const { markdown, images } = await convertDocxToHtml(srcPath);
+      html = buildHtml(inlineDocxImages(markdown, images), '');
+    }
 
     const { filePath, canceled } = await dialog.showSaveDialog({
       defaultPath: baseName + '.html',
@@ -1125,11 +1167,10 @@ ipcMain.handle('save-docx-html', async (event, srcPath) => {
     });
     if (canceled || !filePath) return { success: false };
 
-    const html = buildHtml(inlineDocxImages(markdown, images), '');
     fs.writeFileSync(filePath, html, 'utf-8');
     shell.openPath(filePath);
 
-    safeLog('save-docx-html done:', filePath, 'images:', images.length);
+    safeLog('save-docx-html done:', filePath);
     return { success: true, filePath };
   } catch (error) {
     safeLog('save-docx-html error:', error);

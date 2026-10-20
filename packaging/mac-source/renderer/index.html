@@ -307,6 +307,18 @@
   .pane-btn:hover { background: rgba(180,130,60,0.25); }
   .pane-close { background: none; color: #9b3a2a; font-size: 16px; line-height: 1; padding: 0 6px; }
   .pane-close:hover { color: #6a2016; background: none; }
+  .pane-download-menu {
+    position: fixed; z-index: 2000; background: #fff; border: 1px solid rgba(180,130,60,0.3);
+    border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.18); overflow: hidden; min-width: 120px;
+  }
+  .pane-download-menu button {
+    display: block; width: 100%; padding: 8px 14px; border: none; background: none; text-align: left;
+    font-size: 12px; color: #5a3a1a; cursor: pointer;
+  }
+  .pane-download-menu button:hover { background: rgba(180,130,60,0.15); }
+  .preview-panel.dark .pane-download-menu { background: #2a2b2e; border-color: rgba(255,255,255,0.15); }
+  .preview-panel.dark .pane-download-menu button { color: #e6e6e6; }
+  .preview-panel.dark .pane-download-menu button:hover { background: rgba(255,255,255,0.12); }
   .pane-body { flex: 1; display: flex; position: relative; min-height: 0; }
   .pane-iframe { flex: 1; border: none; width: 100%; height: 100%; }
   .pane-editor {
@@ -332,6 +344,34 @@
   .btn-zoom { padding: 6px 9px; font-size: 14px; font-weight: 700; min-width: 30px; }
   .zoom-level { min-width: 46px; text-align: center; font-size: 12px; color: #8b6a3a; font-variant-numeric: tabular-nums; }
   .preview-panel.dark .zoom-level { color: #a0a0a0; }
+
+  /* ====== 预览搜索定位 ====== */
+  .search-bar {
+    position: absolute; top: 12px; right: 16px; z-index: 20;
+    display: flex; flex-direction: column; gap: 6px;
+    background: #fff; border: 1px solid rgba(180,130,60,0.3); border-radius: 10px;
+    padding: 8px 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .search-row { display: flex; align-items: center; gap: 6px; }
+  .search-input { border: none; outline: none; font-size: 13px; width: 200px; background: transparent; color: #333; }
+  .search-input::placeholder { color: #b0a080; }
+  .search-nav {
+    border: none; background: rgba(180,130,60,0.12); color: #6b4a2a;
+    border-radius: 6px; padding: 3px 9px; font-size: 13px; cursor: pointer; font-weight: 700;
+  }
+  .search-nav:hover { background: rgba(180,130,60,0.25); }
+  .search-nav:disabled { opacity: 0.4; cursor: default; }
+  .search-count { font-size: 12px; color: #8b6a3a; min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+  .search-close { border: none; background: none; color: #9a7a5a; font-size: 16px; cursor: pointer; padding: 0 2px; line-height: 1; }
+  .search-close:hover { color: #4a2c17; }
+  .preview-panel.dark .search-bar { background: #2a2b2e; border-color: rgba(255,255,255,0.15); }
+  .preview-panel.dark .search-input { color: #e0e0e0; }
+  .preview-panel.dark .search-input::placeholder { color: #7a7a7a; }
+  .preview-panel.dark .search-nav { background: rgba(255,255,255,0.08); color: #c0c0c0; }
+  .preview-panel.dark .search-nav:hover { background: rgba(255,255,255,0.16); }
+  .preview-panel.dark .search-count { color: #a0a0a0; }
+  .preview-panel.dark .search-close { color: #a0a0a0; }
+  .preview-panel.dark .search-close:hover { color: #fff; }
 
   /* 全屏：预览面板覆盖整屏，隐藏上传入口 */
   .preview-panel.fullscreen { width: 100vw; }
@@ -798,28 +838,19 @@
     </div>
     <div class="help-body">
       <h2>最新更新</h2>
-      <p><b>核心功能概述</b></p>
+      <p><b>多文件分屏增强</b></p>
       <ul>
-        <li><b>md 文件直接打开</b>：完成文件关联后，双击 .md（或右键 → 打开方式 → MarkMorph，可一次选中多个）自动启动并直接进入<b>分屏预览</b>；已运行时再次双击加载到当前窗口</li>
-        <li><b>新增 Word → MD 入口</b>：拖入或点选 .docx，无损转换为 Markdown（标题、表格、嵌入的 Excel 电子表格渲染为表格、图片提取到 assets 文件夹、超链接保留），预览确认后「下载 MD」落盘</li>
-        <li><b>新增 Word → HTML 入口</b>：拖入或点选 .docx，无损转换为 HTML（图片内联、单文件自包含），预览确认后「下载 HTML」保存并在浏览器打开；针对表格内容自动添加<b>筛选项</b></li>
-        <li><b>多文件分屏预览 + 合并下载</b>：多个 Markdown 并列分屏预览，可编辑保存；合并下载支持 HTML / PDF / Word；布局支持一行 8 格 ↔ 上下两行各 4 格，均等宽 / 等高铺满</li>
-        <li><b>预览内编辑并保存</b>：单文件与多文件分屏均可在预览内编辑并保存回源 .md 文件，支持「取消」放弃修改；外部编辑冲突时提示并自动回退只读，不提交未保存的编辑</li>
-        <li><b>明亮 / 黑暗主题 + 全屏</b>：预览面板支持 🌙/☀️ 主题切换与全屏模式（全屏隐藏上传入口）</li>
+        <li><b>每个分屏搜索 + 替换</b>：点分屏 🔍（或 Ctrl+F）呼出搜索/替换框，可直接定位与替换；只读分屏点「替换 / 全部替换」会自动切入编辑态再执行</li>
+        <li><b>分屏单独下载</b>：每个分屏新增「下载」按钮，可单独把该文件下载为 PDF / HTML / Word，无需合并</li>
+        <li><b>.md 追加打开</b>：已有多文件分屏时，双击 / 右键打开 .md，或从「多文件」入口继续上传，都会在现有分屏基础上<b>追加</b>（按路径去重、上限 8 个），不再关闭已有文件；右键一次选中多个 .md 会全部进入分屏</li>
       </ul>
-      <p><b>其他界面与查看优化</b></p>
+      <p><b>Word 转换增强</b></p>
       <ul>
-        <li><b>缩放按钮移到「编辑」同行</b>：缩放 / 重置按钮与「编辑」同一行，中间显示当前比例（50%–300%，步进 10%）；仅缩放正文区，左侧导航栏不变</li>
-        <li><b>图片 / 流程图放大查看与单独下载</b>：点击图片 / 流程图全屏放大，滚轮缩放、拖动平移；点底部「下载」单独下载（图片原格式 / 流程图 .svg）</li>
-        <li>首页入口改为 <b>2×2 自适应布局</b>，随窗口大小自动缩放</li>
-        <li>HTML 查看 <b>导航栏优化</b>：折叠 / 展开、拖动调整宽度、目录自动高亮跟随</li>
+        <li><b>Word → MD / HTML 支持编辑转换结果</b>：预览后可点「编辑」修改转换结果再下载；编辑后的下载为<b>自包含</b>内容（图片内联，无需 assets 文件夹）</li>
       </ul>
-      <p><b>本次修复与优化</b></p>
+      <p><b>下载体验优化</b></p>
       <ul>
-        <li>修复 MD → HTML 下载后的 HTML <b>左侧目录重复</b>：打开下载文件时目录里每个标题只出现一次</li>
-        <li>Word → HTML 表格<b>筛选项</b>支持<b>多选</b>与<b>按字段清空</b>，筛选项上限调整为 <b>25 列</b></li>
-        <li>修复正文缩放后点击左侧导航章节<b>跳转位置偏差</b></li>
-        <li>非全屏预览时左侧上传入口可<b>滚动查看</b>，首尾卡片不再被遮挡</li>
+        <li><b>下载完成一键定位</b>：任意转换下载成功后按钮变为「下载完成 ✓」，点击即可在文件管理器中定位到该文件</li>
       </ul>
 
       <h2>一、快速上手</h2>
@@ -1025,6 +1056,7 @@
       <button class="btn-tool" id="addFileBtn" title="添加文件（最多 8 个）">+ 添加文件</button>
       <button class="btn-download" id="mergeDownloadBtn" title="合并下载">合并下载</button>
       <button class="btn-tool" id="gridLayoutBtn" title="切换分屏布局" hidden>▬</button>
+      <button class="btn-icon" id="searchToggleBtn" title="搜索定位（Ctrl+F）">🔍</button>
       <button class="btn-icon" id="fullscreenBtn" title="全屏（隐藏上传入口）">⛶</button>
       <button class="btn-icon" id="themeBtn" title="切换明亮/黑暗风格">🌙</button>
       <button class="btn-close" id="closeBtn">×</button>
@@ -1034,6 +1066,20 @@
     <iframe class="preview-iframe" id="previewFrame"></iframe>
     <textarea class="preview-editor" id="previewEditor" spellcheck="false" hidden></textarea>
     <div class="preview-grid" id="previewGrid" hidden></div>
+    <div class="search-bar" id="searchBar" hidden>
+      <div class="search-row">
+        <input class="search-input" id="searchInput" type="text" placeholder="搜索并定位…" spellcheck="false">
+        <button class="search-nav" id="searchPrevBtn" title="上一个（Shift+Enter）" aria-label="上一个">↑</button>
+        <button class="search-nav" id="searchNextBtn" title="下一个（Enter）" aria-label="下一个">↓</button>
+        <span class="search-count" id="searchCount"></span>
+        <button class="search-close" id="searchCloseBtn" title="关闭（Esc）">×</button>
+      </div>
+      <div class="search-row" id="searchReplaceRow" hidden>
+        <input class="search-input" id="replaceInput" type="text" placeholder="替换为…" spellcheck="false">
+        <button class="search-nav" id="replaceOneBtn" title="替换当前选中项">替换</button>
+        <button class="search-nav" id="replaceAllBtn" title="替换全部匹配">全部替换</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1083,6 +1129,17 @@
   const zoomResetBtn = document.getElementById('zoomResetBtn');
   const zoomLevel = document.getElementById('zoomLevel');
   const gridLayoutBtn = document.getElementById('gridLayoutBtn');
+  const searchToggleBtn = document.getElementById('searchToggleBtn');
+  const searchBar = document.getElementById('searchBar');
+  const searchInput = document.getElementById('searchInput');
+  const searchPrevBtn = document.getElementById('searchPrevBtn');
+  const searchNextBtn = document.getElementById('searchNextBtn');
+  const searchCount = document.getElementById('searchCount');
+  const searchCloseBtn = document.getElementById('searchCloseBtn');
+  const searchReplaceRow = document.getElementById('searchReplaceRow');
+  const replaceInput = document.getElementById('replaceInput');
+  const replaceOneBtn = document.getElementById('replaceOneBtn');
+  const replaceAllBtn = document.getElementById('replaceAllBtn');
 
   function setStatus(el, type, html) {
     el.className = 'status ' + type;
@@ -1199,7 +1256,6 @@
         return;
       }
       setPreviewMode('single');
-      editBtn.hidden = true;   // Word 源文件是二进制，预览阶段不可编辑
       loadFrame(previewFrame, r.html);
       previewFilename.textContent = (r.baseName || '文档') + '.md';
       downloadBtn.textContent = '下载 MD';
@@ -1209,8 +1265,8 @@
       setStatus(statusEl, 'success',
         '预览就绪（标题 ' + (s.headings || 0) + ' · 表格 ' + (s.tables || 0) +
         ' · 嵌入表格 ' + (s.embeddedSheets || 0) + ' · 图片 ' + (s.images || 0) +
-        ' · 链接 ' + (s.hyperlinks || 0) + '），点击「下载 MD」保存');
-      previewPanel._pendingTask = { type: 'docx', srcPath, statusEl };
+        ' · 链接 ' + (s.hyperlinks || 0) + '），点击「编辑」可改转换结果，或「下载 MD」保存');
+      previewPanel._pendingTask = { type: 'docx', srcPath, statusEl, baseName: r.baseName, content: r.inlineMarkdown, edited: false };
     } catch (err) {
       setStatus(statusEl, 'error', err.message);
     }
@@ -1231,7 +1287,6 @@
         return;
       }
       setPreviewMode('single');
-      editBtn.hidden = true;   // Word 源文件是二进制，预览阶段不可编辑
       loadFrame(previewFrame, r.html);
       previewFilename.textContent = (r.baseName || '文档') + '.html';
       downloadBtn.textContent = '下载 HTML';
@@ -1241,8 +1296,8 @@
       setStatus(statusEl, 'success',
         '预览就绪（标题 ' + (s.headings || 0) + ' · 表格 ' + (s.tables || 0) +
         ' · 嵌入表格 ' + (s.embeddedSheets || 0) + ' · 图片 ' + (s.images || 0) +
-        ' · 链接 ' + (s.hyperlinks || 0) + '），点击「下载 HTML」保存');
-      previewPanel._pendingTask = { type: 'docxHtml', srcPath, statusEl };
+        ' · 链接 ' + (s.hyperlinks || 0) + '），点击「编辑」可改 HTML 源码，或「下载 HTML」保存');
+      previewPanel._pendingTask = { type: 'docxHtml', srcPath, statusEl, baseName: r.baseName, content: r.html, edited: false };
     } catch (err) {
       setStatus(statusEl, 'error', err.message);
     }
@@ -1317,6 +1372,9 @@
     addFileBtn.hidden = !multi;
     mergeDownloadBtn.hidden = !multi;
     gridLayoutBtn.hidden = !multi;
+    searchToggleBtn.hidden = multi;
+    activePane = null;
+    if (multi) closeSearch();
     previewFrame.hidden = multi;
     previewGrid.hidden = !multi;
     previewEditor.hidden = true;   // 切换模式时退出编辑态
@@ -1417,9 +1475,336 @@
     previewGrid.hidden = true;
     previewGrid.innerHTML = '';
     previewPanel._pendingTask = null;
+    activePane = null;
+    closeSearch();
+    closePaneDownloadMenu();
     fitContainer();
     unwatchAll();
   }
+
+  // ====== 预览搜索定位（头部 🔍 / Ctrl+F），编辑态额外支持替换 ======
+  let searchActive = false;
+  let searchMatches = [];   // 编辑态：[{start,end}]；预览态：[<mark> 元素]
+  let searchIndex = -1;
+  let activePane = null;    // 多文件分屏模式下当前搜索/操作的分屏 pane
+
+  function isMultiMode() {
+    const t = previewPanel._pendingTask;
+    return !!(t && t.type === 'multi');
+  }
+
+  // 当前搜索目标：单文件用主 iframe/编辑框；多文件用当前 pane 的 iframe/编辑框
+  function currentTarget() {
+    if (isMultiMode()) {
+      if (!activePane || !activePane.isConnected) activePane = previewGrid.querySelector('.pane');
+      if (!activePane) return null;
+      return {
+        isEditing: activePane.classList.contains('editing'),
+        iframe: activePane.querySelector('.pane-iframe'),
+        editor: activePane.querySelector('.pane-editor')
+      };
+    }
+    return { isEditing: singleEditing, iframe: previewFrame, editor: previewEditor };
+  }
+
+  function searchMode() {
+    const t = currentTarget();
+    return (t && t.isEditing) ? 'editor' : 'iframe';
+  }
+
+  function searchDoc() {
+    const t = currentTarget();
+    if (!t || !t.iframe) return null;
+    try { return t.iframe.contentDocument; } catch (e) { return null; }
+  }
+
+  function searchEditor() {
+    const t = currentTarget();
+    return t ? t.editor : null;
+  }
+
+  function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function clearSearchHighlights() {
+    if (searchMode() === 'iframe') {
+      const doc = searchDoc();
+      if (doc) {
+        doc.querySelectorAll('mark.mm-search-hit').forEach(m => {
+          if (m.parentNode) m.replaceWith(document.createTextNode(m.textContent));
+        });
+      }
+    }
+    searchMatches = [];
+    searchIndex = -1;
+  }
+
+  function updateSearchCount() {
+    if (!searchMatches.length) { searchCount.textContent = '0/0'; return; }
+    searchCount.textContent = (searchIndex + 1) + '/' + searchMatches.length;
+  }
+
+  function updateSearchNav() {
+    const none = searchMatches.length === 0;
+    searchPrevBtn.disabled = none;
+    searchNextBtn.disabled = none;
+    replaceOneBtn.disabled = none;
+    replaceAllBtn.disabled = none;
+  }
+
+  // 编辑态：把光标/选中文本滚动到可视区域中央
+  function scrollEditorToSelection() {
+    const editor = searchEditor();
+    if (!editor) return;
+    const start = editor.selectionStart;
+    const lines = editor.value.slice(0, start).split('\n').length - 1;
+    const cs = getComputedStyle(editor);
+    const lineHeight = parseFloat(cs.lineHeight) || (parseFloat(cs.fontSize) * 1.6) || 20;
+    editor.scrollTop = Math.max(0, lines * lineHeight - editor.clientHeight / 2);
+  }
+
+  // 高亮/定位当前命中项：编辑态选中文本，预览态高亮 <mark>
+  function highlightCurrent() {
+    const m = searchMatches[searchIndex];
+    if (!m) return;
+    if (searchMode() === 'editor') {
+      const editor = searchEditor();
+      if (!editor) return;
+      editor.focus();
+      editor.setSelectionRange(m.start, m.end);
+      scrollEditorToSelection();
+    } else {
+      searchMatches.forEach(mk => mk.classList.remove('mm-search-current'));
+      m.classList.add('mm-search-current');
+      try { m.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { m.scrollIntoView(); }
+    }
+  }
+
+  function navigate(dir) {
+    if (!searchMatches.length) { updateSearchCount(); updateSearchNav(); return; }
+    searchIndex = (searchIndex + dir + searchMatches.length) % searchMatches.length;
+    highlightCurrent();
+    updateSearchCount();
+    updateSearchNav();
+  }
+
+  // 收集命中项：编辑态扫文本，预览态包 <mark>
+  function computeMatches() {
+    clearSearchHighlights();
+    const q = searchInput.value;
+    if (!q) { searchCount.textContent = ''; updateSearchNav(); return; }
+
+    if (searchMode() === 'editor') {
+      const editor = searchEditor();
+      if (!editor) { searchMatches = []; searchIndex = -1; updateSearchNav(); return; }
+      const v = editor.value;
+      const lower = v.toLowerCase();
+      const ql = q.toLowerCase();
+      const matches = [];
+      let i = 0;
+      while ((i = lower.indexOf(ql, i)) !== -1) {
+        matches.push({ start: i, end: i + q.length });
+        i += q.length || 1;
+      }
+      searchMatches = matches;
+    } else {
+      const doc = searchDoc();
+      if (!doc) { searchMatches = []; searchIndex = -1; updateSearchNav(); return; }
+
+      let style = doc.getElementById('mm-search-style');
+      if (!style && doc.head) {
+        style = doc.createElement('style');
+        style.id = 'mm-search-style';
+        style.textContent =
+          'mark.mm-search-hit{background:#ffe066;color:#1a1a1a;border-radius:2px;padding:0 1px;}' +
+          'mark.mm-search-hit.mm-search-current{background:#ff9800;color:#fff;}';
+        doc.head.appendChild(style);
+      }
+
+      const re = new RegExp(escapeRegExp(q), 'gi');
+      const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (!node.textContent) return NodeFilter.FILTER_REJECT;
+          const p = node.parentNode;
+          const tag = p && p.nodeName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') return NodeFilter.FILTER_REJECT;
+          if (p && p.classList && p.classList.contains('mm-search-hit')) return NodeFilter.FILTER_REJECT;
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+      for (const node of textNodes) {
+        const text = node.textContent;
+        re.lastIndex = 0;
+        let m, lastIndex = 0, matched = false;
+        const frag = doc.createDocumentFragment();
+        while ((m = re.exec(text)) !== null) {
+          matched = true;
+          if (m.index > lastIndex) frag.appendChild(doc.createTextNode(text.slice(lastIndex, m.index)));
+          const mark = doc.createElement('mark');
+          mark.className = 'mm-search-hit';
+          mark.textContent = m[0];
+          frag.appendChild(mark);
+          lastIndex = m.index + m[0].length;
+          if (m[0].length === 0) re.lastIndex++;
+        }
+        if (!matched) continue;
+        if (lastIndex < text.length) frag.appendChild(doc.createTextNode(text.slice(lastIndex)));
+        if (node.parentNode) node.parentNode.replaceChild(frag, node);
+      }
+
+      searchMatches = Array.from(doc.querySelectorAll('mark.mm-search-hit'));
+    }
+    searchIndex = -1;
+  }
+
+  function runSearch() {
+    computeMatches();
+    if (searchMatches.length) navigate(1);
+    else { searchCount.textContent = '0/0'; updateSearchNav(); }
+  }
+
+  // 多文件分屏：在只读 pane 上点替换时，先自动切入编辑态再执行
+  function ensureMultiPaneEditing() {
+    if (!isMultiMode()) return;
+    const pane = (activePane && activePane.isConnected) ? activePane : previewGrid.querySelector('.pane');
+    if (pane && !pane.classList.contains('editing')) {
+      // 清掉只读态遗留的 <mark> 高亮，避免切回只读时残留
+      try {
+        const doc = pane.querySelector('.pane-iframe').contentDocument;
+        if (doc) doc.querySelectorAll('mark.mm-search-hit').forEach(m => m.replaceWith(document.createTextNode(m.textContent)));
+      } catch (e) {}
+      activePane = pane;
+      enterPaneEdit(pane);
+      computeMatches();
+      if (searchMatches.length) navigate(1);   // 选中第一个匹配项，供随后替换
+    }
+  }
+
+  // 替换当前命中项（仅编辑态；多文件分屏只读 pane 会自动切入编辑态）
+  function replaceCurrent() {
+    ensureMultiPaneEditing();
+    if (searchMode() !== 'editor' || !searchMatches.length || searchIndex < 0) return;
+    const q = searchInput.value;
+    if (!q) return;
+    const editor = searchEditor();
+    if (!editor) return;
+    const { start, end } = searchMatches[searchIndex];
+    const rep = replaceInput.value;
+    const v = editor.value;
+    editor.value = v.slice(0, start) + rep + v.slice(end);
+    const cursor = start + rep.length;
+    computeMatches();
+    if (searchMatches.length) {
+      let target = 0;
+      for (let i = 0; i < searchMatches.length; i++) {
+        if (searchMatches[i].start >= cursor) { target = i; break; }
+      }
+      searchIndex = target - 1;
+      navigate(1);
+    } else {
+      searchCount.textContent = '0/0';
+      updateSearchNav();
+    }
+  }
+
+  // 全部替换（仅编辑态；多文件分屏只读 pane 会自动切入编辑态）
+  function replaceAll() {
+    ensureMultiPaneEditing();
+    if (searchMode() !== 'editor' || !searchMatches.length) return;
+    const q = searchInput.value;
+    if (!q) return;
+    const editor = searchEditor();
+    if (!editor) return;
+    const rep = replaceInput.value;
+    const before = editor.value;
+    const re = new RegExp(escapeRegExp(q), 'gi');
+    const count = (before.match(re) || []).length;
+    editor.value = before.replace(re, () => rep);
+    computeMatches();
+    if (searchMatches.length) navigate(1);
+    else searchCount.textContent = '已替换 ' + count + ' 处';
+  }
+
+  function openSearch() {
+    if (!previewPanel.classList.contains('open')) return;
+    const t = currentTarget();
+    if (!t) return;
+    if (t.isEditing) { if (t.editor.hidden) return; }
+    else if (t.iframe.hidden) return;
+    searchBar.hidden = false;
+    searchActive = true;
+    searchReplaceRow.hidden = !t.isEditing && !isMultiMode();  // 多文件分屏始终显示替换行，只读 pane 点替换时自动进入编辑态
+    searchInput.focus();
+    searchInput.select();
+  }
+
+  function closeSearch() {
+    searchBar.hidden = true;
+    searchActive = false;
+    searchInput.value = '';
+    replaceInput.value = '';
+    clearSearchHighlights();
+    searchCount.textContent = '';
+    updateSearchNav();
+  }
+
+  searchToggleBtn.addEventListener('click', () => { if (searchActive) closeSearch(); else openSearch(); });
+  searchCloseBtn.addEventListener('click', closeSearch);
+  searchNextBtn.addEventListener('click', () => navigate(1));
+  searchPrevBtn.addEventListener('click', () => navigate(-1));
+  replaceOneBtn.addEventListener('click', replaceCurrent);
+  replaceAllBtn.addEventListener('click', replaceAll);
+  searchInput.addEventListener('input', runSearch);
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); navigate(e.shiftKey ? -1 : 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeSearch(); }
+  });
+  replaceInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); replaceCurrent(); }
+    else if (e.key === 'Escape') { e.preventDefault(); closeSearch(); }
+  });
+
+  // Ctrl+F / Cmd+F 呼出搜索框（主窗口焦点时；多文件模式作用于当前 pane）
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+      if (previewPanel.classList.contains('open')) {
+        e.preventDefault();
+        if (searchActive) searchInput.focus(); else openSearch();
+      }
+    }
+  });
+
+  // Esc 关闭搜索框（无论焦点在哪）
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && searchActive) { e.preventDefault(); closeSearch(); }
+  });
+
+  // iframe 内 Ctrl+F 转发到父窗口（主 iframe + 每个分屏 iframe 都接入；分屏会顺带激活对应 pane）
+  function attachSearchForwarding(iframe) {
+    iframe.addEventListener('load', () => {
+      try {
+        iframe.contentDocument.addEventListener('keydown', (e) => {
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+            e.preventDefault();
+            activePane = iframe.closest('.pane') || null;
+            openSearch();
+          }
+        });
+      } catch (err) {}
+    });
+  }
+  attachSearchForwarding(previewFrame);
+
+  // 预览内容重载后：清空旧高亮；若搜索框仍展开且有内容则重跑（仅主 iframe）
+  previewFrame.addEventListener('load', () => {
+    if (searchActive && searchInput.value) runSearch();
+    else { searchMatches = []; searchIndex = -1; searchCount.textContent = ''; }
+  });
 
   // ====== 图片插入（直接粘贴 / 点击选择本地文件） ======
   let imageInsertTarget = null;   // 当前要把图片插入到哪个编辑框
@@ -1495,12 +1880,13 @@
     if (singleEditing) {
       saveSingleEdit();
     } else {
+      closeSearch();
       singleEditing = true;
       previewEditor.value = task.content;
       previewFrame.hidden = true;
       previewEditor.hidden = false;
       editBtn.textContent = '保存';
-      insertImageBtn.hidden = false;
+      insertImageBtn.hidden = (task.type === 'docxHtml');   // HTML 源码编辑不支持插图
       cancelEditBtn.hidden = false;
     }
   });
@@ -1508,6 +1894,7 @@
   // 放弃单文件编辑：不写回源文件，直接回到只读预览
   function cancelSingleEdit() {
     if (!singleEditing) return;
+    closeSearch();
     singleEditing = false;
     previewEditor.hidden = true;
     previewFrame.hidden = false;
@@ -1521,7 +1908,31 @@
   async function saveSingleEdit() {
     const task = previewPanel._pendingTask;
     if (!task || task.type === 'multi' || !singleEditing) return;
+    closeSearch();
     const newContent = previewEditor.value;
+
+    // Word→MD / Word→HTML：编辑的是「转换结果」，不写回 .docx，仅更新内存 + 刷新预览，
+    // 点「下载」时按编辑后的内容落盘
+    if (task.type === 'docx' || task.type === 'docxHtml') {
+      task.content = newContent;
+      task.edited = true;
+      singleEditing = false;
+      previewEditor.hidden = true;
+      previewFrame.hidden = false;
+      editBtn.textContent = '编辑';
+      insertImageBtn.hidden = true;
+      cancelEditBtn.hidden = true;
+      if (task.type === 'docxHtml') {
+        loadFrame(previewFrame, newContent);   // HTML 源码直接作为 iframe 内容
+      } else {
+        const html = await window.api.previewMd(newContent, '');
+        loadFrame(previewFrame, html);
+      }
+      setStatus(task.statusEl, 'success', '已保存编辑，点击「下载 ' + (task.type === 'docx' ? 'MD' : 'HTML') + '」时按编辑后的内容落盘');
+      return;
+    }
+
+    // MD→PDF/HTML/Word：编辑的是源 .md，写回源文件并刷新预览
     if (task.srcPath) {
       const res = await window.api.writeMdFile(task.srcPath, newContent);
       if (!res || !res.success) {
@@ -1687,11 +2098,39 @@
   closeBtn.addEventListener('click', closePreview);
 
   // 下载按钮 → 根据任务类型下载 PDF 或 HTML
+  let lastDownloadedPath = '';
+  let downloadDone = false;
+  let downloadIdleLabel = '';
+  let downloadDoneTimer = null;
+
+  // 下载完成：按钮变为可点击「下载完成」，点击直达文件所在位置
+  function markDownloadComplete(filePath) {
+    lastDownloadedPath = filePath;
+    downloadDone = true;
+    downloadBtn.disabled = false;
+    downloadBtn.textContent = '下载完成 ✓';
+    downloadBtn.title = '点击打开下载文件所在位置';
+    clearTimeout(downloadDoneTimer);
+    downloadDoneTimer = setTimeout(() => {
+      downloadDone = false;
+      downloadBtn.textContent = downloadIdleLabel;
+      downloadBtn.title = '';
+    }, 5000);
+  }
+
   downloadBtn.addEventListener('click', async () => {
     const task = previewPanel._pendingTask;
     if (!task) return;
 
+    // 「下载完成」状态下再点击 → 打开下载文件所在位置，而非重复下载
+    if (downloadDone && lastDownloadedPath) {
+      await window.api.openFileLocation(lastDownloadedPath);
+      return;
+    }
+
     if (task.type === 'pdf') {
+      downloadDone = false;
+      downloadIdleLabel = '下载 PDF';
       downloadBtn.disabled = true;
       downloadBtn.textContent = '生成中...';
       setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 PDF...');
@@ -1700,9 +2139,7 @@
         const result = await window.api.downloadPdf(task.content, task.filename, task.srcPath || '');
         if (result.success) {
           setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
-          downloadBtn.textContent = '下载完成 ✓';
-          downloadBtn.disabled = false;
-          setTimeout(() => { downloadBtn.textContent = '下载 PDF'; }, 3000);
+          markDownloadComplete(result.filePath);
         } else {
           setStatus(task.statusEl, 'error', '已取消');
           downloadBtn.disabled = false;
@@ -1714,6 +2151,8 @@
         downloadBtn.textContent = '下载 PDF';
       }
     } else if (task.type === 'html') {
+      downloadDone = false;
+      downloadIdleLabel = '下载 HTML';
       downloadBtn.disabled = true;
       downloadBtn.textContent = '生成中...';
       setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 HTML...');
@@ -1722,9 +2161,7 @@
         const result = await window.api.convertHtml(task.content, task.filename, task.srcPath || '');
         if (result.success) {
           setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
-          downloadBtn.textContent = '下载完成 ✓';
-          downloadBtn.disabled = false;
-          setTimeout(() => { downloadBtn.textContent = '下载 HTML'; }, 3000);
+          markDownloadComplete(result.filePath);
         } else {
           setStatus(task.statusEl, 'error', '已取消');
           downloadBtn.disabled = false;
@@ -1736,17 +2173,17 @@
         downloadBtn.textContent = '下载 HTML';
       }
     } else if (task.type === 'docx') {
+      downloadDone = false;
+      downloadIdleLabel = '下载 MD';
       downloadBtn.disabled = true;
       downloadBtn.textContent = '生成中...';
       setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 MD...');
 
       try {
-        const result = await window.api.saveDocxMd(task.srcPath);
+        const result = await window.api.saveDocxMd(task.srcPath, task.edited ? task.content : null);
         if (result.success) {
           setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
-          downloadBtn.textContent = '下载完成 ✓';
-          downloadBtn.disabled = false;
-          setTimeout(() => { downloadBtn.textContent = '下载 MD'; }, 3000);
+          markDownloadComplete(result.filePath);
         } else {
           setStatus(task.statusEl, 'error', '已取消');
           downloadBtn.disabled = false;
@@ -1758,17 +2195,17 @@
         downloadBtn.textContent = '下载 MD';
       }
     } else if (task.type === 'docxHtml') {
+      downloadDone = false;
+      downloadIdleLabel = '下载 HTML';
       downloadBtn.disabled = true;
       downloadBtn.textContent = '生成中...';
       setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 HTML...');
 
       try {
-        const result = await window.api.saveDocxHtml(task.srcPath);
+        const result = await window.api.saveDocxHtml(task.srcPath, task.edited ? task.content : null);
         if (result.success) {
           setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
-          downloadBtn.textContent = '下载完成 ✓';
-          downloadBtn.disabled = false;
-          setTimeout(() => { downloadBtn.textContent = '下载 HTML'; }, 3000);
+          markDownloadComplete(result.filePath);
         } else {
           setStatus(task.statusEl, 'error', '已取消');
           downloadBtn.disabled = false;
@@ -1852,10 +2289,39 @@
     return items;
   }
 
-  // 打开多文件分屏预览（默认全屏）
+  // 已有分屏打开时：把新文件追加到现有分屏（按 srcPath 去重）。返回 true 表示已处理（含无新增的情况）
+  function appendMultiItems(items) {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type !== 'multi' || !previewPanel.classList.contains('open')) return false;
+    const existing = task.files || [];
+    const seen = new Set(existing.map(f => f.srcPath));
+    const toAdd = items.filter(f => !seen.has(f.srcPath));
+    if (!toAdd.length) {
+      setStatus(task.statusEl, 'success', '文件已在预览中，未重复添加');
+      return true;
+    }
+    const merged = existing.concat(toAdd);
+    const overflow = merged.length - MAX_MULTI;
+    if (overflow > 0) {
+      merged.length = MAX_MULTI;
+      setStatus(task.statusEl, 'error', '最多 ' + MAX_MULTI + ' 个文件，已忽略 ' + overflow + ' 个');
+    } else {
+      setStatus(task.statusEl, 'success', '已加载 ' + merged.length + ' 个文件，分屏预览中');
+    }
+    task.files = merged;
+    closeSearch();
+    activePane = null;
+    renderMultiPreview(merged);
+    previewFilename.textContent = merged.length + ' 个文件';
+    updateWatch();
+    return true;
+  }
+
+  // 打开多文件分屏预览（默认全屏）；已打开时在现有基础上追加（去重）
   async function openMultiPreview(fileList) {
     if (!fileList || !fileList.length) return;
     const items = await filesToItems(Array.from(fileList));
+    if (appendMultiItems(items)) return;
     openMultiItems(items);
   }
 
@@ -1890,6 +2356,7 @@
 
   // 渲染分屏 pane（每文件一个）
   function renderMultiPreview(files) {
+    closePaneDownloadMenu();
     previewGrid.innerHTML = '';
     previewGrid.classList.remove('has-fs-pane');
     const n = files.length;
@@ -1913,6 +2380,62 @@
       previewGrid.appendChild(buildColRow(files.map(f => createPane(f))));
     }
     updateGridLayoutBtn();
+  }
+
+  // ====== 分屏单独下载：每个分屏「下载」按钮 → 弹出 PDF / HTML / Word 格式选择 ======
+  let downloadTargetPane = null;
+  const paneDownloadMenu = document.createElement('div');
+  paneDownloadMenu.className = 'pane-download-menu';
+  paneDownloadMenu.hidden = true;
+  const PaneFmtLabels = { pdf: 'PDF', html: 'HTML', word: 'Word' };
+  Object.keys(PaneFmtLabels).forEach(fmt => {
+    const b = document.createElement('button');
+    b.textContent = '下载 ' + PaneFmtLabels[fmt];
+    b.addEventListener('click', () => {
+      const pane = downloadTargetPane;
+      closePaneDownloadMenu();
+      if (pane && pane.isConnected) downloadPaneFile(pane, fmt);
+    });
+    paneDownloadMenu.appendChild(b);
+  });
+  document.body.appendChild(paneDownloadMenu);
+
+  function closePaneDownloadMenu() {
+    paneDownloadMenu.hidden = true;
+    downloadTargetPane = null;
+  }
+
+  document.addEventListener('click', (e) => {
+    if (paneDownloadMenu.hidden) return;
+    if (!paneDownloadMenu.contains(e.target)) closePaneDownloadMenu();
+  });
+
+  function openPaneDownloadMenu(pane, btn) {
+    downloadTargetPane = pane;
+    const r = btn.getBoundingClientRect();
+    paneDownloadMenu.hidden = false;
+    paneDownloadMenu.style.top = (r.bottom + 4) + 'px';
+    paneDownloadMenu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 150)) + 'px';
+  }
+
+  // 单独下载某个分屏文件（编辑态用编辑框当前内容，否则用已保存内容）
+  async function downloadPaneFile(pane, fmt) {
+    const f = pane._file;
+    if (!f) return;
+    const task = previewPanel._pendingTask;
+    const editing = pane.classList.contains('editing');
+    const content = editing ? pane.querySelector('.pane-editor').value : f.content;
+    const fname = f.name || 'document.md';
+    try {
+      let result;
+      if (fmt === 'pdf') result = await window.api.downloadPdf(content, fname, f.srcPath || '');
+      else if (fmt === 'html') result = await window.api.convertHtml(content, fname, f.srcPath || '');
+      else result = await window.api.convertWord(content, fname, f.srcPath || '');
+      if (result && result.success) setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+      else setStatus(task.statusEl, 'error', '已取消');
+    } catch (err) {
+      setStatus(task.statusEl, 'error', err.message);
+    }
   }
 
   function createPane(f) {
@@ -1939,6 +2462,15 @@
     img.title = '插入图片（粘贴或选择本地文件）';
     img.hidden = true;
 
+    const searchBtn = document.createElement('button');
+    searchBtn.className = 'pane-btn pane-search-btn';
+    searchBtn.textContent = '🔍';
+    searchBtn.title = '搜索/替换本分屏（Ctrl+F）';
+    searchBtn.addEventListener('click', () => {
+      activePane = pane;
+      if (searchActive) closeSearch(); else openSearch();
+    });
+
     const cancel = document.createElement('button');
     cancel.className = 'pane-btn pane-cancel-btn';
     cancel.textContent = '取消';
@@ -1952,13 +2484,23 @@
     fs.title = '放大此分屏查看';
     fs.addEventListener('click', () => togglePaneFullscreen(pane));
 
+    const dl = document.createElement('button');
+    dl.className = 'pane-btn pane-dl-btn';
+    dl.textContent = '下载';
+    dl.title = '单独下载此文件（PDF / HTML / Word）';
+    dl.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (paneDownloadMenu.hidden) openPaneDownloadMenu(pane, dl);
+      else closePaneDownloadMenu();
+    });
+
     const close = document.createElement('button');
     close.className = 'pane-btn pane-close';
     close.textContent = '×';
     close.title = '关闭此文件';
     close.addEventListener('click', () => closePane(pane));
 
-    header.append(name, edit, img, cancel, fs, close);
+    header.append(name, edit, img, searchBtn, cancel, fs, dl, close);
 
     const body = document.createElement('div');
     body.className = 'pane-body';
@@ -1982,7 +2524,9 @@
     pane.append(header, body);
 
     window.api.previewMd(f.content, f.srcPath).then(html => loadFrame(iframe, html));
+    attachSearchForwarding(iframe);
     attachPaneDrag(pane);
+    pane.addEventListener('click', () => { activePane = pane; });
 
     return pane;
   }
@@ -2013,26 +2557,35 @@
     return frag;
   }
 
-  // 分屏 pane：编辑 / 保存
-  function togglePaneEdit(pane) {
+  // 分屏 pane 进入编辑态（只读 → 编辑框）
+  function enterPaneEdit(pane) {
     const iframe = pane.querySelector('.pane-iframe');
     const editor = pane.querySelector('.pane-editor');
     const editBtnEl = pane.querySelector('.pane-btn');
+    if (!editor.hidden) return;
+    editor.value = pane._file.content;
+    iframe.hidden = true;
+    editor.hidden = false;
+    editBtnEl.textContent = '保存';
+    pane.querySelector('.pane-img-btn').hidden = false;
+    pane.querySelector('.pane-cancel-btn').hidden = false;
+    pane.classList.add('editing');
+  }
+
+  // 分屏 pane：编辑 / 保存
+  function togglePaneEdit(pane) {
+    const editor = pane.querySelector('.pane-editor');
     if (!editor.hidden) {
       savePaneEdit(pane);
     } else {
-      editor.value = pane._file.content;
-      iframe.hidden = true;
-      editor.hidden = false;
-      editBtnEl.textContent = '保存';
-      pane.querySelector('.pane-img-btn').hidden = false;
-      pane.querySelector('.pane-cancel-btn').hidden = false;
-      pane.classList.add('editing');
+      closeSearch();
+      enterPaneEdit(pane);
     }
   }
 
   // 放弃分屏编辑：不写回源文件，回到只读预览
   function cancelPaneEdit(pane) {
+    closeSearch();
     const iframe = pane.querySelector('.pane-iframe');
     const editor = pane.querySelector('.pane-editor');
     const editBtnEl = pane.querySelector('.pane-btn');
@@ -2045,6 +2598,7 @@
   }
 
   async function savePaneEdit(pane) {
+    closeSearch();
     const iframe = pane.querySelector('.pane-iframe');
     const editor = pane.querySelector('.pane-editor');
     const editBtnEl = pane.querySelector('.pane-btn');
@@ -2102,6 +2656,8 @@
       closePreview();
       return;
     }
+    closeSearch();
+    activePane = null;
     renderMultiPreview(task.files);
     previewFilename.textContent = task.files.length + ' 个文件';
     updateWatch();
@@ -2170,23 +2726,10 @@
   addFileBtn.addEventListener('click', () => addFileInput.click());
   addFileInput.addEventListener('change', async () => {
     if (!addFileInput.files.length) return;
-    const task = previewPanel._pendingTask;
-    if (!task || task.type !== 'multi') return;
-    const remaining = MAX_MULTI - task.files.length;
-    if (remaining <= 0) {
-      setStatus(statusMerge, 'error', '最多 ' + MAX_MULTI + ' 个文件');
-      addFileInput.value = '';
-      return;
-    }
     const incoming = await filesToItems(Array.from(addFileInput.files));
     addFileInput.value = '';
-    if (incoming.length === 0) return;
-    const toAdd = incoming.slice(0, remaining);
-    task.files = task.files.concat(toAdd);
-    renderMultiPreview(task.files);
-    previewFilename.textContent = task.files.length + ' 个文件';
-    setStatus(statusMerge, 'success', '已添加 ' + toAdd.length + ' 个文件（共 ' + task.files.length + ' 个）');
-    updateWatch();
+    if (!incoming.length) return;
+    appendMultiItems(incoming);
   });
 
   // ====== 合并下载弹窗 ======
@@ -2555,7 +3098,8 @@
 
   // ====== 文件关联自动打开：双击 .md → 默认进入多文件分屏预览（可一次打开多个） ======
 
-  // 按绝对路径批量读取 .md 并打开多文件分屏预览
+  // 按绝对路径批量读取 .md 并打开多文件分屏预览。
+  // 若已有多文件分屏预览打开，则在现有基础上追加（去重），不关闭已有文件。
   async function openFilesByPaths(filePaths) {
     if (!filePaths || !filePaths.length) return;
     const items = [];
@@ -2567,12 +3111,24 @@
         }
       } catch (e) {}
     }
+    if (!items.length) return;
+
+    // 已有多文件分屏 → 追加（按 srcPath 去重），不关闭已有文件
+    if (appendMultiItems(items)) return;
+
     openMultiItems(items);
+  }
+
+  // 串行化多次 open-file 回调（Windows 多文件右键打开可能逐文件触发实例），避免并发下互相覆盖
+  let openPathsQueue = Promise.resolve();
+  function queueOpenPaths(filePaths) {
+    if (!filePaths || !filePaths.length) return;
+    openPathsQueue = openPathsQueue.then(() => openFilesByPaths(filePaths));
   }
 
   // 已运行实例收到再次打开的文件（数组）
   if (window.api && typeof window.api.onOpenFile === 'function') {
-    window.api.onOpenFile((filePaths) => openFilesByPaths(Array.isArray(filePaths) ? filePaths : [filePaths]));
+    window.api.onOpenFile((filePaths) => queueOpenPaths(Array.isArray(filePaths) ? filePaths : [filePaths]));
   }
 
   // 首次启动：从 query 参数读取待打开文件路径（JSON 数组，兼容旧的单路径）
@@ -2580,7 +3136,7 @@
   if (openRaw) {
     let paths;
     try { paths = JSON.parse(openRaw); } catch (e) { paths = [openRaw]; }
-    openFilesByPaths(Array.isArray(paths) ? paths : [paths]);
+    queueOpenPaths(Array.isArray(paths) ? paths : [paths]);
   }
 
   // ====== 使用说明弹窗 ======
