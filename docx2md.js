@@ -745,7 +745,8 @@ function pickSheet(zip) {
   return names[0] || 'xl/worksheets/sheet1.xml';
 }
 
-function parseSheet(xml, shared) {
+function parseSheet(xml, shared, opts) {
+  opts = opts || {};
   const tree = new XMLParser(XML_OPTS).parse(xml);
   const root = tree.find((n) => nodeTag(n) === 'worksheet');
   if (!root) return [];
@@ -803,12 +804,14 @@ function parseSheet(xml, shared) {
     for (let c = 1; c <= maxC; c++) row.push(grid[r + ',' + c] || '');
     rows.push(row);
   }
-  // 合并区只保留左上角，其余留空（pipe 表格不支持 colspan/rowspan，留空是标准做法）
+  // 合并区：默认只保留左上角、其余留空（pipe 表格不支持 colspan/rowspan，留空是标准做法）；
+  // opts.fillMerged 为真时，把左上角的值填充到整个合并区（供思维导图等需要完整上下级级联关系的场景）。
   for (const m of merges) {
+    const fillVal = rows[m.r1 - 1][m.c1 - 1];
     for (let r = m.r1; r <= m.r2; r++) {
       for (let c = m.c1; c <= m.c2; c++) {
         if (r === m.r1 && c === m.c1) continue;
-        rows[r - 1][c - 1] = '';
+        rows[r - 1][c - 1] = opts.fillMerged ? fillVal : '';
       }
     }
   }
@@ -1268,4 +1271,11 @@ async function convertDocxToHtml(docxPath) {
   return convertDocxToMarkdown(docxPath, { htmlTables: true });
 }
 
-module.exports = { convertDocxToMarkdown, convertDocxToHtml };
+module.exports = {
+  convertDocxToMarkdown,
+  convertDocxToHtml,
+  // 供 mindmap.js 复用（独立 .xlsx 解析）
+  XML_OPTS, nodeTag, nodeVal, nodeAttrs, attr, childrenOf, textOf,
+  findChild, findAllDescendants, zipString, parseRels,
+  parseCellRef, parseMergeRef, parseSharedStrings, parseSheet, trimGrid
+};

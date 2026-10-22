@@ -31,6 +31,13 @@ contextBridge.exposeInMainWorld('api', {
   resetBackground: () => ipcRenderer.invoke('reset-background'),
   readMdFile: (filePath) => ipcRenderer.invoke('read-md-file', filePath),
   writeMdFile: (filePath, content) => ipcRenderer.invoke('write-md-file', { filePath, content }),
+  // Excel/CSV → 思维导图
+  parseSpreadsheet: (srcPath) => ipcRenderer.invoke('parse-spreadsheet', srcPath),
+  readSheetGrid: (srcPath, opts) => ipcRenderer.invoke('read-sheet-grid', srcPath, opts),
+  buildMindMapSvg: (payload) => ipcRenderer.invoke('build-mindmap-svg', payload),
+  saveMindMapSvg: (svg, defaultName) => ipcRenderer.invoke('save-mindmap-svg', { svg, defaultName }),
+  loadMindMapHistory: () => ipcRenderer.invoke('mindmap-history-load'),
+  saveMindMapHistory: (records) => ipcRenderer.invoke('mindmap-history-save', records),
   onOpenFile: (cb) => ipcRenderer.on('open-file', (_event, filePaths) => cb(filePaths)),
   watchFile: (filePath) => ipcRenderer.invoke('watch-file', filePath),
   unwatchFile: (filePath) => ipcRenderer.invoke('unwatch-file', filePath),

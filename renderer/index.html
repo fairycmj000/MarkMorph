@@ -706,6 +706,353 @@
   .merge-btn-confirm { background: linear-gradient(135deg, #c08030, #d4943a); color: #fff; box-shadow: 0 2px 8px rgba(160,100,30,0.3); }
   .merge-btn-confirm:hover { background: linear-gradient(135deg, #a06820, #c08030); }
 
+  /* ====== Excel/CSV → 思维导图（右侧预览区上下分栏） ====== */
+  .mindmap-workspace {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    overflow: hidden;
+    color: #3b2a1a;
+  }
+  .mindmap-config {
+    flex: 1 1 56%;
+    min-height: 160px;
+    overflow-y: auto;
+    background: linear-gradient(180deg, #fdfaf2, #f7f0e2);
+    border: 1.5px solid rgba(180,130,60,0.45);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .mindmap-result {
+    flex: 1 1 44%;
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #fff;
+    border: 1.5px solid rgba(180,130,60,0.45);
+    border-radius: 12px;
+  }
+  .mindmap-result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(180,130,60,0.3);
+    background: rgba(192,128,48,0.10);
+  }
+  .mindmap-result-title { font-size: 12px; font-weight: 700; color: #5a3a1a; }
+  .mindmap-result-hint { font-size: 11px; color: #9a7a5a; }
+  .mindmap-result-view { margin-left: auto; display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .mindmap-result-view .mindmap-fs-btn { margin-left: 0; }
+  .mindmap-result-header > .mindmap-fs-btn { margin-left: 0; }
+  .mindmap-result-frame { flex: 1; border: none; width: 100%; background: #fff; }
+  .mindmap-conflicts {
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(200,80,60,0.35);
+    background: rgba(200,80,60,0.08);
+    font-size: 12px;
+    line-height: 1.6;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .mindmap-conflict-title { font-weight: 700; color: #a03020; margin-bottom: 2px; }
+  .mindmap-conflict-item { color: #7a2a1a; margin-bottom: 6px; }
+  .mindmap-conflict-cond { color: #7a2a1a; font-weight: 600; }
+  .mindmap-conflict-result { color: #8a3a28; padding-left: 14px; }
+  .mindmap-config-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .mindmap-filename { font-size: 12px; color: #9a7a5a; }
+  .mindmap-fs-btn {
+    margin-left: auto;
+    border: 1px solid rgba(180,130,60,0.4);
+    background: rgba(255,255,255,0.7);
+    color: #7a5a3a;
+    border-radius: 6px;
+    font-size: 13px;
+    line-height: 1;
+    padding: 4px 7px;
+    cursor: pointer;
+  }
+  .mindmap-fs-btn:hover { background: rgba(192,128,48,0.15); color: #5a3a1a; }
+  .mindmap-fs-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .mindmap-header-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .mindmap-header-actions .mindmap-fs-btn { margin-left: 0; }
+  .mindmap-save-name { width: 132px; padding: 4px 8px; border: 1px solid rgba(180,130,60,0.4); border-radius: 6px; font-size: 12px; color: #5a3a1a; background: rgba(255,255,255,0.7); outline: none; }
+  .mindmap-save-name:focus { border-color: #b08030; }
+  .mindmap-save-name::placeholder { color: #b0987a; }
+  #mindMapSaveModal .mindmap-save-name { width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+  /* 决策表：+结果列 / +条件列 按钮移到标题行右侧 */
+  .mindmap-field-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+  .mindmap-field-label-row > label { width: auto; }
+  .mindmap-field-label-row .merge-btn-add { font-size: 11px; padding: 2px 8px; }
+  /* 必填项标记 */
+  .mindmap-req { color: #e5484d; margin-left: 3px; font-weight: 700; }
+  /* 历史记录弹窗 */
+  .mindmap-history-modal { position: fixed; inset: 0; z-index: 500; background: rgba(20, 12, 30, 0.55); display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .mindmap-history-modal.open { display: flex; }
+  .mindmap-history-modal-box { width: 520px; max-width: calc(100vw - 40px); max-height: 82vh; display: flex; flex-direction: column; background: linear-gradient(180deg, #fdfaf2, #f7f0e2); border-radius: 16px; border: 1.5px solid rgba(180,130,60,0.5); box-shadow: 0 12px 40px rgba(0,0,0,0.4); padding: 18px; color: #3b2a1a; }
+  .mindmap-history-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .mindmap-history-modal-header > span { font-size: 15px; font-weight: 700; color: #5a3a1a; }
+  .mindmap-history-modal-hint { font-size: 11px; color: #9a7a5a; margin-bottom: 10px; }
+  .mindmap-history-modal .mindmap-history-list { max-height: 46vh; }
+  .mindmap-history-modal .mindmap-history-actions { justify-content: flex-end; }
+  /* 上下两层各自放大全屏：被放大的层占满工作区，另一层隐藏 */
+  .mindmap-workspace.fs-config .mindmap-result { display: none; }
+  .mindmap-workspace.fs-config .mindmap-config { flex: 1 1 100%; }
+  .mindmap-workspace.fs-result .mindmap-config { display: none; }
+  .mindmap-workspace.fs-result .mindmap-result { flex: 1 1 100%; }
+  .mindmap-section { margin-bottom: 6px; }
+  .mindmap-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #5a3a1a;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed rgba(180,130,60,0.3);
+  }
+  .mindmap-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #5a3a1a;
+  }
+  .mindmap-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .mindmap-field > label {
+    width: 64px;
+    font-size: 12px;
+    color: #7a5a3a;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .mindmap-field select,
+  .mindmap-field input[type="text"] {
+    flex: 1;
+    min-width: 120px;
+    border: 1px solid rgba(180,130,60,0.4);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 13px;
+    color: #3b2a1a;
+    background: rgba(255,255,255,0.8);
+    outline: none;
+  }
+  .mindmap-field select:focus,
+  .mindmap-field input[type="text"]:focus { border-color: #c08030; }
+  .mindmap-range { display: flex; align-items: center; gap: 6px; }
+  .mindmap-range input { width: 90px; }
+  .mindmap-tilde { color: #9a7a5a; }
+  .mindmap-mode { gap: 14px; }
+  .mindmap-mode > label { width: auto; }
+  .mindmap-radio, .mindmap-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #6b4a2a;
+    font-weight: normal;
+    cursor: pointer;
+  }
+  .mindmap-preview { margin-bottom: 10px; }
+  .mindmap-preview-title { font-size: 12px; color: #7a5a3a; font-weight: 600; margin-bottom: 4px; }
+  .mindmap-table-wrap {
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid rgba(180,130,60,0.25);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.6);
+  }
+  .mindmap-table { border-collapse: collapse; font-size: 11px; width: max-content; }
+  .mindmap-table th, .mindmap-table td {
+    border: 1px solid rgba(180,130,60,0.25);
+    padding: 3px 8px;
+    white-space: nowrap;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mindmap-table th {
+    background: rgba(192,128,48,0.15);
+    color: #5a3a1a;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+  }
+  .mindmap-table td.row-num { background: rgba(192,128,48,0.08); color: #9a7a5a; text-align: center; }
+  .mindmap-preview-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .mindmap-preview-header .mindmap-fs-btn { margin-left: auto; font-size: 11px; padding: 3px 7px; }
+  .mindmap-col-resizer { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; background: transparent; z-index: 3; }
+  .mindmap-col-resizer:hover, .mindmap-col-resizer.active { background: rgba(192,128,48,0.55); }
+  /* 数据预览全屏覆盖层：参考「数据对比工具」预览实现（列宽拖拽 + 搜索 + 分页） */
+  .mindmap-preview-fullscreen { position: fixed; inset: 0; z-index: 100000; background: rgba(250,245,236,0.99); padding: 18px 20px; display: flex; flex-direction: column; }
+  .mindmap-preview-fullscreen.dark { background: rgba(24,25,27,0.99); }
+  .mindmap-preview-fullscreen .mmfs-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .mindmap-preview-fullscreen .mmfs-title { font-size: 15px; font-weight: 700; color: #5a3a1a; }
+  .mindmap-preview-fullscreen.dark .mmfs-title { color: #e6c89a; }
+  .mindmap-preview-fullscreen .mmfs-hint { font-size: 12px; color: #b08030; font-weight: 700; }
+  .mindmap-preview-fullscreen .mmfs-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .mindmap-preview-fullscreen .mmfs-search { padding: 5px 8px; border: 1px solid rgba(180,130,60,0.4); border-radius: 4px; font-size: 12px; width: 240px; outline: none; background: #fff; color: #333; }
+  .mindmap-preview-fullscreen.dark .mmfs-search { background: #26272a; border-color: rgba(255,255,255,0.15); color: #e0e0e0; }
+  .mindmap-preview-fullscreen .mmfs-search:focus { border-color: #b08030; }
+  .mindmap-preview-fullscreen .mmfs-count { font-size: 11px; color: #888; min-width: 42px; text-align: center; }
+  .mindmap-preview-fullscreen .mmfs-btn { padding: 4px 10px; border: 1px solid rgba(180,130,60,0.4); border-radius: 4px; background: #fff; cursor: pointer; font-size: 11px; color: #5a3a1a; }
+  .mindmap-preview-fullscreen .mmfs-btn:hover { background: rgba(192,128,48,0.15); }
+  .mindmap-preview-fullscreen .mmfs-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .mindmap-preview-fullscreen.dark .mmfs-btn { background: #26272a; border-color: rgba(255,255,255,0.15); color: #c0c0c0; }
+  .mindmap-preview-fullscreen.dark .mmfs-btn:hover { background: rgba(255,255,255,0.12); }
+  .mindmap-preview-fullscreen .mmfs-close { font-weight: 700; color: #fff; background: #b08030; border: 2px solid #b08030; }
+  .mindmap-preview-fullscreen .mmfs-close:hover { background: #966a24; }
+  .mindmap-preview-fullscreen .mmfs-wrap { flex: 1; overflow: auto; border: 1px solid rgba(180,130,60,0.25); border-radius: 8px; background: #fff; min-height: 0; }
+  .mindmap-preview-fullscreen.dark .mmfs-wrap { background: #1a1b1e; border-color: rgba(255,255,255,0.12); }
+  .mindmap-preview-fullscreen .mmfs-table { border-collapse: collapse; font-size: 12px; width: max-content; }
+  .mindmap-preview-fullscreen .mmfs-table th, .mindmap-preview-fullscreen .mmfs-table td { border: 1px solid rgba(180,130,60,0.25); padding: 4px 10px; white-space: nowrap; max-width: 320px; overflow: hidden; text-overflow: ellipsis; }
+  .mindmap-preview-fullscreen .mmfs-table th { background: rgba(192,128,48,0.16); color: #5a3a1a; font-weight: 600; position: sticky; top: 0; z-index: 2; }
+  .mindmap-preview-fullscreen .mmfs-table td { background: #fff; }
+  .mindmap-preview-fullscreen.dark .mmfs-table th { background: rgba(255,255,255,0.1); color: #e6c89a; }
+  .mindmap-preview-fullscreen.dark .mmfs-table td { background: #1a1b1e; color: #d0d0d0; border-color: rgba(255,255,255,0.1); }
+  .mindmap-preview-fullscreen .mmfs-table td.row-num { background: rgba(192,128,48,0.08); color: #9a7a5a; text-align: center; }
+  .mindmap-preview-fullscreen.dark .mmfs-table td.row-num { background: rgba(255,255,255,0.05); color: #a0a0a0; }
+  .mindmap-preview-fullscreen .mmfs-pager { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 10px; }
+  .mmfs-hl { background: #fff3cd; }
+  .mmfs-hl-current { background: #ffc107; }
+  .mmfs-match { font-weight: 700; background: #ffff00; border-radius: 2px; }
+  .mindmap-levels { border-top: 1px dashed rgba(180,130,60,0.3); padding-top: 10px; }
+  .mindmap-levels .mindmap-field { align-items: flex-start; }
+  #mindMapLevels { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; }
+  #mindMapEntityCols { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 200px; }
+  #mindMapResultCols { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+  .mindmap-level-row { display: flex; gap: 6px; align-items: center; }
+  .mindmap-level-row select { flex: 1; min-width: 0; }
+  .mindmap-level-remove {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border: 1px solid rgba(180,130,60,0.4);
+    background: rgba(255,255,255,0.7);
+    color: #9a5a3a;
+    border-radius: 6px;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .mindmap-level-remove:hover { background: rgba(200,90,50,0.15); color: #7a3a1a; }
+  /* 决策表条件列：与结果列同款，上下逐行堆叠 */
+  #mindMapCondLevels { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+  /* 决策表：结果列 / 条件列左右并排，紧凑布局 */
+  .mindmap-cols-row { display: flex; gap: 14px; flex: 1; min-width: 0; }
+  /* 文件内容：工作表 / 数据范围左右并排，紧凑布局 */
+  .mindmap-inline-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .mindmap-inline-row .mindmap-field { flex: 1; min-width: 0; margin-bottom: 0; }
+  .mindmap-inline-row .mindmap-title-field { flex: 0 1 220px; }
+  .mindmap-inline-row .mindmap-mode { flex: 1; }
+  .mindmap-cols-row .mindmap-field { flex: 1; min-width: 0; flex-direction: column; align-items: stretch; gap: 6px; }
+  .mindmap-cols-row .mindmap-field > label { width: auto; }
+  .mindmap-cols-row #mindMapCondLevels,
+  .mindmap-cols-row #mindMapResultCols { width: 100%; }
+  /* 生成模式 + 视图同行的紧凑布局 */
+  .mindmap-viewgroup { display: inline-flex; align-items: center; gap: 10px; }
+  .mindmap-viewlabel { font-size: 12px; color: #7a5a3a; font-weight: 600; margin-left: 8px; }
+  .mindmap-help {
+    font-size: 11px; line-height: 1.55; color: #8a6a48;
+    background: rgba(192,128,48,0.09); border: 1px solid rgba(192,128,48,0.15);
+    border-radius: 6px; padding: 6px 9px; margin-bottom: 8px;
+  }
+  /* 拖拽排序手柄 */
+  .mindmap-level-drag { flex-shrink: 0; cursor: grab; color: #b09060; font-size: 13px; letter-spacing: -1px; padding: 0 5px; user-select: none; }
+  .mindmap-level-drag:active { cursor: grabbing; }
+  .mindmap-level-row.dragging { opacity: 0.45; }
+  /* 多条件筛选 */
+  .mindmap-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .mindmap-filter-row { display: flex; gap: 6px; align-items: center; }
+  .mindmap-filter-row select,
+  .mindmap-filter-row input[type="text"] {
+    border: 1px solid rgba(180,130,60,0.4);
+    border-radius: 7px; padding: 5px 7px; font-size: 12px;
+    color: #3b2a1a; background: rgba(255,255,255,0.8); outline: none;
+  }
+  .mindmap-filter-row select:focus,
+  .mindmap-filter-row input[type="text"]:focus { border-color: #c08030; }
+  .mindmap-filter-logic { flex: 0 0 50px; }
+  .mindmap-filter-col { flex: 1; min-width: 0; }
+  .mindmap-filter-op { flex: 0 0 86px; }
+  .mindmap-filter-val { flex: 1; min-width: 0; }
+  .mindmap-filter-row:first-child .mindmap-filter-logic { visibility: hidden; }
+  .mindmap-filter-row .mindmap-level-remove { flex-shrink: 0; }
+  /* 历史记录 */
+  .mindmap-history-count { font-weight: normal; color: #9a7a5a; font-size: 11px; }
+  .mindmap-history-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow: auto; margin-bottom: 8px; }
+  .mindmap-history-item { display: flex; gap: 8px; align-items: center; border: 1px solid rgba(180,130,60,0.25); border-radius: 8px; padding: 6px 8px; background: rgba(255,255,255,0.5); cursor: pointer; }
+  .mindmap-history-item:hover { background: rgba(192,128,48,0.12); }
+  .mindmap-history-check { flex-shrink: 0; }
+  .mindmap-history-info { flex: 1; min-width: 0; }
+  .mindmap-history-name { font-size: 12px; font-weight: 600; color: #5a3a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mindmap-history-meta { font-size: 11px; color: #9a7a5a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mindmap-history-load { flex-shrink: 0; border: 1px solid rgba(192,128,48,0.5); background: rgba(192,128,48,0.12); color: #6b4a2a; border-radius: 6px; font-size: 12px; padding: 3px 8px; cursor: pointer; }
+  .mindmap-history-load:hover { background: rgba(192,128,48,0.24); }
+  .mindmap-history-del { flex-shrink: 0; width: 22px; height: 22px; border: 1px solid rgba(180,130,60,0.4); background: rgba(255,255,255,0.7); color: #9a5a3a; border-radius: 6px; font-size: 14px; line-height: 1; cursor: pointer; }
+  .mindmap-history-del:hover { background: rgba(200,90,50,0.15); color: #7a3a1a; }
+  .mindmap-history-actions { display: flex; gap: 8px; }
+  .mindmap-history-empty { font-size: 12px; color: #9a7a5a; padding: 4px 2px; }
+  .preview-panel.dark .mindmap-level-remove { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #c0c0c0; }
+  .preview-panel.dark .mindmap-level-remove:hover { background: rgba(255,255,255,0.16); color: #fff; }
+  .mindmap-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+  /* 深色主题下思维导图分栏配色 */
+  .preview-panel.dark .mindmap-config { background: linear-gradient(180deg, #2a2b2e, #202124); border-color: rgba(255,255,255,0.12); }
+  .preview-panel.dark .mindmap-result { background: #1a1b1e; border-color: rgba(255,255,255,0.12); }
+  .preview-panel.dark .mindmap-result-header { background: rgba(255,255,255,0.06); border-bottom-color: rgba(255,255,255,0.1); }
+  .preview-panel.dark .mindmap-result-frame { background: #fff; }
+  .preview-panel.dark .mindmap-title,
+  .preview-panel.dark .mindmap-result-title,
+  .preview-panel.dark .mindmap-section-title { color: #e6c89a; }
+  .preview-panel.dark .mindmap-filename,
+  .preview-panel.dark .mindmap-result-hint { color: #a0a0a0; }
+  .preview-panel.dark .mindmap-field > label { color: #c0a070; }
+  .preview-panel.dark .mindmap-field select,
+  .preview-panel.dark .mindmap-field input[type="text"],
+  .preview-panel.dark .mindmap-save-name { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #e0e0e0; }
+  .preview-panel.dark .mindmap-table-wrap { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.12); }
+  .preview-panel.dark .mindmap-table th { background: rgba(255,255,255,0.08); color: #e6c89a; }
+  .preview-panel.dark .mindmap-table td { border-color: rgba(255,255,255,0.1); color: #d0d0d0; }
+  .preview-panel.dark .mindmap-table td.row-num { background: rgba(255,255,255,0.05); color: #a0a0a0; }
+  .preview-panel.dark .mindmap-radio,
+  .preview-panel.dark .mindmap-check { color: #c0a070; }
+  .preview-panel.dark .mindmap-tilde,
+  .preview-panel.dark .mindmap-preview-title { color: #a0a0a0; }
+  .preview-panel.dark .mindmap-fs-btn { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #c0c0c0; }
+  .preview-panel.dark .mindmap-fs-btn:hover { background: rgba(255,255,255,0.16); color: #fff; }
+  .preview-panel.dark .mindmap-section-title { border-bottom-color: rgba(255,255,255,0.12); }
+  .preview-panel.dark .mindmap-levels { border-top-color: rgba(255,255,255,0.12); }
+  .preview-panel.dark .mindmap-help { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #c0a070; }
+  .preview-panel.dark .mindmap-viewlabel { color: #c0a070; }
+  .preview-panel.dark .mindmap-level-drag { color: #8a7a60; }
+  .preview-panel.dark .mindmap-filter-row select,
+  .preview-panel.dark .mindmap-filter-row input[type="text"] { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #e0e0e0; }
+  .preview-panel.dark .mindmap-history-count { color: #a0a0a0; }
+  .preview-panel.dark .mindmap-history-item { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
+  .preview-panel.dark .mindmap-history-name { color: #e6c89a; }
+  .preview-panel.dark .mindmap-history-meta,
+  .preview-panel.dark .mindmap-history-empty { color: #a0a0a0; }
+  .preview-panel.dark .mindmap-history-load { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #c0a070; }
+  .preview-panel.dark .mindmap-history-del { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #c0c0c0; }
+
   /* ====== 水印 ====== */
   .watermark {
     position: fixed;
@@ -1034,6 +1381,19 @@
     </div>
     <div class="status hidden" id="statusMerge"></div>
   </div>
+
+  <div class="card card-mindmap">
+    <div class="card-title">Excel/CSV → 思维导图 <span class="badge">SVG</span></div>
+    <div class="drop-zone" id="dropZoneMindMap">
+      <input type="file" id="fileInputMindMap" accept=".csv,.xlsx">
+      <div class="drop-icon">🧠</div>
+      <div class="drop-text">
+        拖入或点击选择 .csv / .xlsx 文件
+        <span>自选 Sheet 与数据区间，生成 SVG 思维导图</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusMindMap"></div>
+  </div>
 </div>
 
 <div class="preview-panel" id="previewPanel">
@@ -1080,6 +1440,140 @@
         <button class="search-nav" id="replaceAllBtn" title="替换全部匹配">全部替换</button>
       </div>
     </div>
+    <div class="mindmap-workspace" id="mindMapWorkspace" hidden>
+      <div class="mindmap-config" id="mindMapConfig">
+        <div class="mindmap-config-header">
+          <span class="mindmap-title">Excel/CSV → 思维导图</span>
+          <span class="mindmap-filename" id="mindMapFilename"></span>
+          <span class="mindmap-header-actions">
+            <button class="merge-btn merge-btn-confirm" id="mindMapGenerateBtn" title="生成思维导图">生成思维导图</button>
+            <button class="mindmap-fs-btn" id="mindMapSaveBtn" title="保存到当前名称（首次保存会弹窗命名）" disabled>💾 保存</button>
+            <button class="mindmap-fs-btn" id="mindMapSaveAsBtn" title="另存为新的名称">💾 另存</button>
+            <button class="mindmap-fs-btn" id="mindMapHistoryBtn" title="查看历史记录">🕘 历史</button>
+            <button class="mindmap-fs-btn" id="mindMapConfigFsBtn" title="放大全屏查看（再次点击还原）">⛶</button>
+          </span>
+        </div>
+
+        <div class="mindmap-section">
+          <div class="mindmap-section-title">文件内容</div>
+          <div class="mindmap-inline-row">
+            <div class="mindmap-field" id="mindMapSheetField">
+              <label>工作表</label>
+              <select id="mindMapSheetSelect"></select>
+            </div>
+            <div class="mindmap-field">
+              <label>数据范围</label>
+              <div class="mindmap-range">
+                <input type="text" id="mindMapRangeStart" placeholder="A1" spellcheck="false">
+                <span class="mindmap-tilde">:</span>
+                <input type="text" id="mindMapRangeEnd" placeholder="B20" spellcheck="false">
+              </div>
+              <button class="merge-btn merge-btn-add" id="mindMapRangeReset" title="重置为自动（整表）">自动</button>
+            </div>
+          </div>
+          <div class="mindmap-preview">
+            <div class="mindmap-preview-header">
+              <span class="mindmap-preview-title" id="mindMapPreviewTitle">数据预览</span>
+              <button class="mindmap-fs-btn" id="mindMapPreviewFsBtn" title="全屏查看数据（可拖拽列宽、搜索、分页）" hidden>⛶ 全屏</button>
+            </div>
+            <div class="mindmap-table-wrap" id="mindMapTableWrap"></div>
+          </div>
+        </div>
+
+        <div class="mindmap-section">
+          <div class="mindmap-section-title">数据筛选（可选）</div>
+          <div class="mindmap-filters" id="mindMapFilters"></div>
+          <button class="merge-btn merge-btn-add" id="mindMapAddFilter" title="增加一个筛选条件">+ 添加条件</button>
+        </div>
+
+        <div class="mindmap-section">
+          <div class="mindmap-section-title">思维导图配置</div>
+          <div class="mindmap-inline-row">
+            <div class="mindmap-field mindmap-title-field">
+              <label>根节点标题</label>
+              <input type="text" id="mindMapRootTitle" placeholder="中心主题">
+            </div>
+            <div class="mindmap-field mindmap-mode">
+              <label>生成模式</label>
+              <label class="mindmap-radio"><input type="radio" name="mindMapMode" value="rows" checked> 行式（每行一条记录）</label>
+              <!-- 矩阵模式暂时隐藏（用户改用 Excel 透视表替代）；如需恢复，删除本行 hidden 即可 -->
+              <label class="mindmap-radio" hidden><input type="radio" name="mindMapMode" value="matrix"> 矩阵（列是主体）</label>
+              <label class="mindmap-radio"><input type="radio" name="mindMapMode" value="decision"> 决策表（条件→结果）</label>
+            </div>
+          </div>
+
+          <div class="mindmap-levels" id="mindMapRowMode">
+            <div class="mindmap-help">每一行是一条记录，等价于 SQL 的 <code>GROUP BY</code>：你选的「层级」就是分组字段，从左到右逐级归并、长成一棵树。例：表有「大区 / 城市 / 门店」三列，层级依次选它们，就等于 <code>GROUP BY 大区, 城市, 门店</code>，得到 大区 → 城市 → 门店，节点旁的数字就是各组的行数。空单元格会保留成「（空）」节点，占住这一层的位置、不砍断后面的层级。</div>
+            <div class="mindmap-field">
+              <label>根节点</label>
+              <select id="mindMapRootCol"></select>
+            </div>
+            <div class="mindmap-field">
+              <label>层级<span class="mindmap-req" title="必填">*</span></label>
+              <div id="mindMapLevels"></div>
+              <button class="merge-btn merge-btn-add" id="mindMapAddLevel" title="增加一个层级（最多 8 层）">+ 层级</button>
+            </div>
+          </div>
+
+          <div class="mindmap-levels" id="mindMapMatrixMode" hidden>
+            <div class="mindmap-help">每一列是一个主体（列头 = 主体名），「标签列」指定某一列作为属性名，其余列作为属性值。例：列为「属性 / 旗舰店 / 社区店」，标签列选「属性」，即生成 旗舰店 → 面积 → 200㎡、社区店 → 面积 → 80㎡。「主体列」可拖拽调整顺序、增删。</div>
+            <div class="mindmap-field">
+              <label>标签列</label>
+              <select id="mindMapLabelCol"></select>
+            </div>
+            <div class="mindmap-field">
+              <label>主体列<span class="mindmap-req" title="必填">*</span></label>
+              <div id="mindMapEntityCols"></div>
+              <button class="merge-btn merge-btn-add" id="mindMapAddEntityCol" title="增加一个主体列（最多 8 个）">+ 主体列</button>
+            </div>
+            <div class="mindmap-field">
+              <label></label>
+              <label class="mindmap-check"><input type="checkbox" id="mindMapIncludeValues" checked> 包含属性值（作为第三级节点）</label>
+            </div>
+          </div>
+
+          <div class="mindmap-levels" id="mindMapDecisionMode" hidden>
+            <div class="mindmap-help">每一行是一条「如果…那么…」规则，等价于 SQL 的 <code>CASE WHEN … THEN …</code>：条件列 = <code>WHEN</code> 里的判断，结果列 = <code>THEN</code> 后面的答案，节点统一写成「列名=具体值」。例：<code>WHEN 面积=100㎡ AND 业态=社区 THEN 店型=社区店</code>。空的条件单元格 = 不判断这个条件（跳过），但结果一定会显示。</div>
+            <div class="mindmap-cols-row">
+              <div class="mindmap-field">
+                <div class="mindmap-field-label-row">
+                  <label>条件列<span class="mindmap-req" title="必填">*</span></label>
+                  <button class="merge-btn merge-btn-add" id="mindMapAddCondLevel" title="增加一个条件列（最多 8 层）">+ 条件列</button>
+                </div>
+                <div id="mindMapCondLevels"></div>
+              </div>
+              <div class="mindmap-field">
+                <div class="mindmap-field-label-row">
+                  <label>结果列<span class="mindmap-req" title="必填">*</span></label>
+                  <button class="merge-btn merge-btn-add" id="mindMapAddResultCol" title="增加一个结果级联列（最多 4 层）">+ 结果列</button>
+                </div>
+                <div id="mindMapResultCols"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="mindmap-result">
+        <div class="mindmap-result-header">
+          <span class="mindmap-result-title">思维导图预览</span>
+          <span class="mindmap-result-hint">修改上方配置后重新点击「生成思维导图」即可刷新</span>
+          <span class="mindmap-result-view">
+            <button class="mindmap-fs-btn" id="mindMapLayoutBtn" title="切换布局：左右放射 ↔ 上下层级">⬌ 左右</button>
+            <label class="mindmap-check"><input type="checkbox" id="mindMapShowCount" checked> 显示聚合计数</label>
+            <span class="mindmap-viewgroup" id="mindMapViewGroup" hidden>
+              <span class="mindmap-viewlabel">视图</span>
+              <label class="mindmap-radio"><input type="radio" name="mindMapDecisionView" value="tree" checked> 决策树（条件→结果）</label>
+              <label class="mindmap-radio"><input type="radio" name="mindMapDecisionView" value="grouped"> 按结果分组（结果→条件）</label>
+            </span>
+          </span>
+          <button class="mindmap-fs-btn" id="mindMapResultFsBtn" title="放大全屏查看（再次点击还原）">⛶</button>
+        </div>
+        <div class="mindmap-conflicts" id="mindMapConflicts" hidden></div>
+        <iframe class="mindmap-result-frame" id="mindMapResultFrame"></iframe>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1099,6 +1593,36 @@
     <div class="merge-actions">
       <button class="merge-btn merge-btn-cancel" id="mergeCancelBtn">取消</button>
       <button class="merge-btn merge-btn-confirm" id="mergeConfirmBtn">合并下载</button>
+    </div>
+  </div>
+</div>
+
+<div class="mindmap-history-modal" id="mindMapHistoryModal" hidden>
+  <div class="mindmap-history-modal-box">
+    <div class="mindmap-history-modal-header">
+      <span>历史记录</span>
+      <button class="mindmap-fs-btn" id="mindMapHistoryModalClose" title="关闭">✕</button>
+    </div>
+    <div class="mindmap-history-modal-hint">选择一个自动铺满窗口；勾选多个则从左到右分屏查看</div>
+    <div class="mindmap-history-list" id="mindMapHistoryList"></div>
+    <div class="mindmap-history-actions">
+      <button class="merge-btn merge-btn-confirm" id="mindMapHistoryOpenBtn">打开选中</button>
+      <button class="merge-btn merge-btn-add" id="mindMapHistoryModalClear">清空历史</button>
+    </div>
+  </div>
+</div>
+
+<div class="mindmap-history-modal" id="mindMapSaveModal" hidden>
+  <div class="mindmap-history-modal-box">
+    <div class="mindmap-history-modal-header">
+      <span id="mindMapSaveModalTitle">保存思维导图</span>
+      <button class="mindmap-fs-btn" id="mindMapSaveModalClose" title="关闭">✕</button>
+    </div>
+    <div class="mindmap-history-modal-hint" id="mindMapSaveModalHint">输入名称保存当前配置与导图，之后可在「历史」中找回</div>
+    <input type="text" id="mindMapSaveModalName" class="mindmap-save-name" placeholder="保存名称（默认用文件名）" spellcheck="false">
+    <div class="mindmap-history-actions">
+      <button class="merge-btn" id="mindMapSaveModalCancel">取消</button>
+      <button class="merge-btn merge-btn-confirm" id="mindMapSaveModalConfirm">保存</button>
     </div>
   </div>
 </div>
@@ -1366,18 +1890,21 @@
   // 切换预览模式：single（单文件） / multi（多文件分屏）
   function setPreviewMode(mode) {
     const multi = (mode === 'multi');
-    editBtn.hidden = multi;
+    const mindmap = (mode === 'mindmap');
+    const mmSplit = (mode === 'mindmap-split');
+    editBtn.hidden = multi || mindmap || mmSplit;
     cancelEditBtn.hidden = true;
-    downloadBtn.hidden = multi;
+    downloadBtn.hidden = multi || mmSplit;
     addFileBtn.hidden = !multi;
     mergeDownloadBtn.hidden = !multi;
-    gridLayoutBtn.hidden = !multi;
-    searchToggleBtn.hidden = multi;
+    gridLayoutBtn.hidden = !(multi || mmSplit);
+    searchToggleBtn.hidden = multi || mindmap || mmSplit;
     activePane = null;
-    if (multi) closeSearch();
-    previewFrame.hidden = multi;
-    previewGrid.hidden = !multi;
+    if (multi || mindmap || mmSplit) closeSearch();
+    previewFrame.hidden = multi || mindmap || mmSplit;
+    previewGrid.hidden = !(multi || mmSplit);
     previewEditor.hidden = true;   // 切换模式时退出编辑态
+    mindMapWorkspace.hidden = !mindmap;
     singleEditing = false;
     editBtn.textContent = '编辑';
     insertImageBtn.hidden = true;
@@ -1474,6 +2001,9 @@
     previewFrame.hidden = false;
     previewGrid.hidden = true;
     previewGrid.innerHTML = '';
+    mindMapWorkspace.hidden = true;
+    mindMapWorkspace.classList.remove('fs-config', 'fs-result');
+    mindMapResultFrame.srcdoc = '';
     previewPanel._pendingTask = null;
     activePane = null;
     closeSearch();
@@ -2066,8 +2596,11 @@
   function zoomFrames() {
     const task = previewPanel._pendingTask;
     if (!task) return [];
-    if (task.type === 'multi') {
+    if (task.type === 'multi' || task.type === 'mindmap-split') {
       return Array.from(previewGrid.querySelectorAll('.pane-iframe'));
+    }
+    if (task.type === 'mindmap') {
+      return [mindMapResultFrame];
     }
     return [previewFrame];
   }
@@ -2120,6 +2653,7 @@
   async function refreshPreview(changedPath) {
     const task = previewPanel._pendingTask;
     if (!task || !previewPanel.classList.contains('open')) return;
+    if (task.type === 'mindmap-split') return; // 历史分屏无源文件监听，无需同步
 
     if (task.type === 'multi') {
       const panes = Array.from(previewGrid.querySelectorAll('.pane'));
@@ -2310,6 +2844,33 @@
         downloadBtn.disabled = false;
         downloadBtn.textContent = '下载 HTML';
       }
+    } else if (task.type === 'mindmap') {
+      if (!task.svg) {
+        setStatus(task.statusEl, 'error', '请先在上方配置并点击「生成思维导图」');
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载 SVG';
+        return;
+      }
+      downloadDone = false;
+      downloadIdleLabel = '下载 SVG';
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '保存中...';
+      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 保存 SVG...');
+      try {
+        const result = await window.api.saveMindMapSvg(task.svg, task.baseName + '.svg');
+        if (result.success) {
+          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+          markDownloadComplete(result.filePath);
+        } else {
+          setStatus(task.statusEl, 'error', '已取消');
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = '下载 SVG';
+        }
+      } catch (err) {
+        setStatus(task.statusEl, 'error', err.message);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载 SVG';
+      }
     }
   });
 
@@ -2366,10 +2927,11 @@
 
   gridLayoutBtn.addEventListener('click', () => {
     const task = previewPanel._pendingTask;
-    if (!task || task.type !== 'multi') return;
+    if (!task || (task.type !== 'multi' && task.type !== 'mindmap-split')) return;
     multiSingleRow = !multiSingleRow;
     updateGridLayoutBtn();
-    renderMultiPreview(task.files);
+    if (task.type === 'multi') renderMultiPreview(task.files);
+    else renderMindMapSplit(task.records);
   });
 
   // File 对象数组 → { name, content, srcPath }
@@ -3245,6 +3807,1175 @@
   if (helpClose) helpClose.addEventListener('click', closeHelp);
   if (helpOverlay) helpOverlay.addEventListener('click', (e) => { if (e.target === helpOverlay) closeHelp(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && helpOverlay.classList.contains('open')) closeHelp(); });
+
+  // ====== Excel/CSV → 思维导图 ======
+  let mindMapState = null; // { srcPath, kind, sheets, sheetIndex, grid, rows, cols, startCell, endCell, baseName, statusEl, svg }
+  let mindMapHistory = []; // 历史记录 [{ id, ts, baseName, srcPath, sheetIndex, sheetName, range, payload, svg, stats, conflicts }]
+
+  const mindMapWorkspace = document.getElementById('mindMapWorkspace');
+  const mindMapResultFrame = document.getElementById('mindMapResultFrame');
+  const mindMapFilename = document.getElementById('mindMapFilename');
+  const mindMapSheetSelect = document.getElementById('mindMapSheetSelect');
+  const mindMapSheetField = document.getElementById('mindMapSheetField');
+  const mindMapRangeStart = document.getElementById('mindMapRangeStart');
+  const mindMapRangeEnd = document.getElementById('mindMapRangeEnd');
+  const mindMapRangeReset = document.getElementById('mindMapRangeReset');
+  const mindMapTableWrap = document.getElementById('mindMapTableWrap');
+  const mindMapPreviewTitle = document.getElementById('mindMapPreviewTitle');
+  const mindMapPreviewFsBtn = document.getElementById('mindMapPreviewFsBtn');
+  const mindMapRootCol = document.getElementById('mindMapRootCol');
+  const mindMapRootTitle = document.getElementById('mindMapRootTitle');
+  const mindMapLevels = document.getElementById('mindMapLevels');
+  const mindMapAddLevel = document.getElementById('mindMapAddLevel');
+  const mindMapLabelCol = document.getElementById('mindMapLabelCol');
+  const mindMapIncludeValues = document.getElementById('mindMapIncludeValues');
+  const mindMapEntityCols = document.getElementById('mindMapEntityCols');
+  const mindMapAddEntityCol = document.getElementById('mindMapAddEntityCol');
+  const mindMapShowCount = document.getElementById('mindMapShowCount');
+  const mindMapRowMode = document.getElementById('mindMapRowMode');
+  const mindMapMatrixMode = document.getElementById('mindMapMatrixMode');
+  const mindMapDecisionMode = document.getElementById('mindMapDecisionMode');
+  const mindMapViewGroup = document.getElementById('mindMapViewGroup');
+  const mindMapResultCols = document.getElementById('mindMapResultCols');
+  const mindMapAddResultCol = document.getElementById('mindMapAddResultCol');
+  const mindMapCondLevels = document.getElementById('mindMapCondLevels');
+  const mindMapAddCondLevel = document.getElementById('mindMapAddCondLevel');
+  const mindMapGenerateBtn = document.getElementById('mindMapGenerateBtn');
+  const mindMapConfigFsBtn = document.getElementById('mindMapConfigFsBtn');
+  const mindMapResultFsBtn = document.getElementById('mindMapResultFsBtn');
+  const mindMapConflicts = document.getElementById('mindMapConflicts');
+  const mindMapFilters = document.getElementById('mindMapFilters');
+  const mindMapAddFilter = document.getElementById('mindMapAddFilter');
+  const mindMapHistoryList = document.getElementById('mindMapHistoryList');
+  const mindMapSaveBtn = document.getElementById('mindMapSaveBtn');
+  const mindMapSaveAsBtn = document.getElementById('mindMapSaveAsBtn');
+  const mindMapHistoryBtn = document.getElementById('mindMapHistoryBtn');
+  const mindMapLayoutBtn = document.getElementById('mindMapLayoutBtn');
+  const mindMapSaveModal = document.getElementById('mindMapSaveModal');
+  const mindMapSaveModalTitle = document.getElementById('mindMapSaveModalTitle');
+  const mindMapSaveModalHint = document.getElementById('mindMapSaveModalHint');
+  const mindMapSaveModalName = document.getElementById('mindMapSaveModalName');
+  const mindMapSaveModalConfirm = document.getElementById('mindMapSaveModalConfirm');
+  const mindMapSaveModalCancel = document.getElementById('mindMapSaveModalCancel');
+  const mindMapSaveModalClose = document.getElementById('mindMapSaveModalClose');
+  const mindMapConfig = document.getElementById('mindMapConfig');
+  const mindMapHistoryModal = document.getElementById('mindMapHistoryModal');
+  const mindMapHistoryModalClose = document.getElementById('mindMapHistoryModalClose');
+  const mindMapHistoryOpenBtn = document.getElementById('mindMapHistoryOpenBtn');
+  const mindMapHistoryModalClear = document.getElementById('mindMapHistoryModalClear');
+
+  function mmColLetter(n) {
+    let s = '';
+    while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+
+  function columnLabel(c) {
+    const g = mindMapState.grid;
+    let hint = '';
+    for (let r = 0; r < Math.min(g.length, 5); r++) {
+      const v = g[r] && g[r][c] != null ? String(g[r][c]).trim() : '';
+      if (v) { hint = v; break; }
+    }
+    if (hint.length > 12) hint = hint.slice(0, 12) + '…';
+    hint = hint.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const letter = mmColLetter(c + 1);
+    return '列' + letter + (hint ? '（' + hint + '）' : '');
+  }
+
+  function columnOptionsHtml(cols, noneLabel) {
+    let h = '<option value="-1">' + noneLabel + '</option>';
+    for (let c = 0; c < cols; c++) h += '<option value="' + c + '">' + columnLabel(c) + '</option>';
+    return h;
+  }
+
+  function renderMindMapSheetSelect() {
+    mindMapSheetSelect.innerHTML = '';
+    (mindMapState.sheets || []).forEach((s) => {
+      const o = document.createElement('option');
+      o.value = String(s.index);
+      o.textContent = s.name;
+      mindMapSheetSelect.appendChild(o);
+    });
+    mindMapSheetSelect.value = String(mindMapState.sheetIndex);
+    mindMapSheetField.hidden = (mindMapState.sheets || []).length <= 1;
+  }
+
+  function renderMindMapRangeInputs() {
+    mindMapRangeStart.value = mindMapState.startCell || '';
+    mindMapRangeEnd.value = mindMapState.endCell || '';
+  }
+
+  function mmEscape(v) {
+    return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function renderMindMapPreview() {
+    const g = mindMapState.grid || [];
+    const maxR = Math.min(g.length, 100);
+    const maxC = g[0] ? g[0].length : 0;
+    const total = g.length;
+    mindMapPreviewTitle.textContent = '共 ' + total + ' 条，预览前 ' + maxR + ' 条 × ' + maxC + ' 列';
+    mindMapTableWrap._fullGrid = g;
+    mindMapPreviewFsBtn.hidden = !total;
+    let html = '<table class="mindmap-table"><thead><tr><th><span class="mindmap-col-resizer"></span></th>';
+    for (let c = 0; c < maxC; c++) html += '<th>' + mmColLetter(c + 1) + '<span class="mindmap-col-resizer"></span></th>';
+    html += '</tr></thead><tbody>';
+    for (let r = 0; r < maxR; r++) {
+      html += '<tr><td class="row-num">' + (r + 1) + '</td>';
+      for (let c = 0; c < maxC; c++) {
+        let raw = g[r] && g[r][c] != null ? String(g[r][c]) : '';
+        let v = mmEscape(raw);
+        if (raw.length > 30) v = mmEscape(raw.slice(0, 30)) + '…';
+        html += '<td title="' + mmEscape(raw) + '">' + v + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    mindMapTableWrap.innerHTML = html;
+    initMindMapColResize(mindMapTableWrap.querySelector('.mindmap-table'));
+  }
+
+  // 列宽拖拽调整（参考「数据对比工具」预览实现）
+  function initMindMapColResize(table) {
+    if (!table) return;
+    requestAnimationFrame(() => {
+      const ths = table.querySelectorAll('th');
+      if (!ths.length || ths[0].offsetWidth === 0) return;
+      ths.forEach((th) => {
+        if (!th.querySelector('.mindmap-col-resizer')) {
+          const r = document.createElement('span');
+          r.className = 'mindmap-col-resizer';
+          th.appendChild(r);
+        }
+      });
+      ths.forEach((th) => {
+        const resizer = th.querySelector('.mindmap-col-resizer');
+        if (!resizer || resizer._wired) return;
+        resizer._wired = true;
+        let startX, startW, startTableW;
+        resizer.addEventListener('mousedown', (e) => {
+          e.preventDefault(); e.stopPropagation();
+          startX = e.pageX; startW = th.offsetWidth;
+          if (table.style.tableLayout !== 'fixed') {
+            const allThs = table.querySelectorAll('th');
+            const ws = []; allThs.forEach((t) => ws.push(t.offsetWidth));
+            table.style.tableLayout = 'fixed';
+            table.style.width = ws.reduce((a, b) => a + b, 0) + 'px';
+            allThs.forEach((t, i) => { t.style.width = ws[i] + 'px'; });
+          }
+          startTableW = table.offsetWidth;
+          resizer.classList.add('active');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+          const onMove = (ev) => {
+            const delta = ev.pageX - startX;
+            const nw = Math.max(30, startW + delta);
+            th.style.width = nw + 'px';
+            table.style.width = (startTableW + (nw - startW)) + 'px';
+          };
+          const onUp = () => {
+            resizer.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
+      });
+    });
+  }
+
+  // 全屏数据预览：分页 + 搜索 + 列宽拖拽（参考「数据对比工具」预览实现）
+  function mmFsRenderPage(overlay, page) {
+    const grid = overlay._grid || [];
+    const pageSize = overlay._pageSize || 200;
+    const total = grid.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    page = Math.max(0, Math.min(page, totalPages - 1));
+    const start = page * pageSize;
+    const end = Math.min(start + pageSize, total);
+    const maxC = grid[0] ? grid[0].length : 0;
+    const table = overlay.querySelector('.mmfs-table');
+    let html = '<thead><tr><th><span class="mindmap-col-resizer"></span></th>';
+    for (let c = 0; c < maxC; c++) html += '<th>' + mmColLetter(c + 1) + '<span class="mindmap-col-resizer"></span></th>';
+    html += '</tr></thead><tbody>';
+    for (let r = start; r < end; r++) {
+      html += '<tr><td class="row-num">' + (r + 1) + '</td>';
+      for (let c = 0; c < maxC; c++) {
+        const v = grid[r] && grid[r][c] != null ? String(grid[r][c]) : '';
+        html += '<td>' + mmEscape(v) + '</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody>';
+    table.innerHTML = html;
+    initMindMapColResize(table);
+    overlay._page = page;
+    overlay._totalPages = totalPages;
+    const info = overlay.querySelector('.mmfs-pager-info');
+    if (info) info.textContent = (total ? (start + 1) + '-' + end + ' / 共 ' + total + ' 条' : '共 0 条');
+    overlay.querySelector('.mmfs-prev').disabled = page <= 0;
+    overlay.querySelector('.mmfs-next').disabled = page >= totalPages - 1;
+  }
+
+  function mmFsSearch(overlay, kw) {
+    const table = overlay.querySelector('.mmfs-table');
+    const cells = table.querySelectorAll('td');
+    kw = (kw || '').trim();
+    cells.forEach((td) => {
+      if (td._orig !== undefined) { td.innerHTML = td._orig; delete td._orig; }
+      td.classList.remove('mmfs-hl', 'mmfs-hl-current');
+    });
+    const matches = [];
+    if (kw) {
+      cells.forEach((td) => {
+        const txt = td.textContent;
+        if (txt.toLowerCase().indexOf(kw.toLowerCase()) !== -1) {
+          td._orig = td.innerHTML;
+          const re = new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+          td.innerHTML = td._orig.replace(re, '<b class="mmfs-match">$1</b>');
+          td.classList.add('mmfs-hl');
+          matches.push(td);
+        }
+      });
+    }
+    overlay._matches = matches;
+    overlay._matchIdx = matches.length ? 0 : -1;
+    const cnt = overlay.querySelector('.mmfs-search-count');
+    if (cnt) cnt.textContent = matches.length ? (overlay._matchIdx + 1) + '/' + matches.length : '0';
+    if (matches.length) {
+      matches[0].classList.add('mmfs-hl-current');
+      matches[0].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }
+
+  function mmFsNav(overlay, dir) {
+    const matches = overlay._matches || [];
+    if (!matches.length) return;
+    matches.forEach((td) => td.classList.remove('mmfs-hl-current'));
+    let idx = (overlay._matchIdx || 0) + dir;
+    if (idx < 0) idx = matches.length - 1;
+    if (idx >= matches.length) idx = 0;
+    overlay._matchIdx = idx;
+    matches[idx].classList.add('mmfs-hl-current');
+    matches[idx].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const cnt = overlay.querySelector('.mmfs-search-count');
+    if (cnt) cnt.textContent = (idx + 1) + '/' + matches.length;
+  }
+
+  function openMindMapPreviewFullscreen() {
+    const grid = mindMapTableWrap._fullGrid || (mindMapState && mindMapState.grid) || [];
+    const dark = previewPanel.classList.contains('dark');
+    const overlay = document.createElement('div');
+    overlay.className = 'mindmap-preview-fullscreen' + (dark ? ' dark' : '');
+    overlay._grid = grid;
+    overlay._pageSize = 200;
+    overlay.innerHTML =
+      '<div class="mmfs-header">'
+      + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span class="mmfs-title">数据预览</span>'
+      + '<span class="mmfs-hint">ℹ 字段宽度可调整（拖拽表头列边缘）</span></div>'
+      + '<div class="mmfs-tools">'
+      + '<input type="text" class="mmfs-search" placeholder="搜索...">'
+      + '<span class="mmfs-search-count mmfs-count">0</span>'
+      + '<button class="mmfs-btn mmfs-search-prev">▲</button>'
+      + '<button class="mmfs-btn mmfs-search-next">▼</button>'
+      + '<button class="mmfs-btn mmfs-close">✕ 关闭</button>'
+      + '</div></div>'
+      + '<div class="mmfs-wrap"><table class="mmfs-table"></table></div>'
+      + '<div class="mmfs-pager"><span class="mmfs-pager-info mmfs-count" style="min-width:120px;"></span>'
+      + '<button class="mmfs-btn mmfs-prev">上一页</button>'
+      + '<button class="mmfs-btn mmfs-next">下一页</button></div>';
+    document.body.appendChild(overlay);
+    mmFsRenderPage(overlay, 0);
+
+    overlay.querySelector('.mmfs-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    const searchInput = overlay.querySelector('.mmfs-search');
+    searchInput.addEventListener('input', () => mmFsSearch(overlay, searchInput.value));
+    overlay.querySelector('.mmfs-search-prev').addEventListener('click', () => mmFsNav(overlay, -1));
+    overlay.querySelector('.mmfs-search-next').addEventListener('click', () => mmFsNav(overlay, 1));
+    overlay.querySelector('.mmfs-prev').addEventListener('click', () => mmFsRenderPage(overlay, overlay._page - 1));
+    overlay.querySelector('.mmfs-next').addEventListener('click', () => mmFsRenderPage(overlay, overlay._page + 1));
+    const onKey = (e) => {
+      if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); }
+    };
+    document.addEventListener('keydown', onKey);
+    searchInput.focus();
+  }
+
+  function makeLevelRow(cols, value, draggable) {
+    const row = document.createElement('div');
+    row.className = 'mindmap-level-row';
+    if (draggable) {
+      const h = document.createElement('span');
+      h.className = 'mindmap-level-drag';
+      h.draggable = true;
+      h.textContent = '⋮⋮';
+      h.title = '拖拽调整顺序';
+      row.appendChild(h);
+    }
+    const sel = document.createElement('select');
+    sel.innerHTML = columnOptionsHtml(cols, '（不使用）');
+    sel.value = value;
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'mindmap-level-remove';
+    rm.textContent = '×';
+    rm.title = '移除该层级';
+    rm.addEventListener('click', () => row.remove());
+    row.appendChild(sel);
+    row.appendChild(rm);
+    return row;
+  }
+
+  function enableRowDrag(container) {
+    let dragEl = null, moved = false;
+    container.addEventListener('dragstart', (e) => {
+      const row = e.target.closest('.mindmap-level-row');
+      if (!row || !container.contains(row)) return;
+      dragEl = row;
+      moved = false;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', ''); } catch (err) {}
+    });
+    container.addEventListener('dragend', () => {
+      if (dragEl) dragEl.classList.remove('dragging');
+      dragEl = null;
+      if (moved) markMindMapDirty();
+    });
+    container.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const row = e.target.closest('.mindmap-level-row');
+      if (!row || !container.contains(row) || row === dragEl) return;
+      const rect = row.getBoundingClientRect();
+      const before = (e.clientY < rect.top + rect.height / 2);
+      if (before) container.insertBefore(dragEl, row);
+      else container.insertBefore(dragEl, row.nextSibling);
+      moved = true;
+    });
+  }
+
+  const FILTER_OPS = [
+    { v: 'contains', t: '包含' },
+    { v: 'notContains', t: '不包含' },
+    { v: 'equals', t: '等于' },
+    { v: 'notEmpty', t: '非空' },
+    { v: 'empty', t: '为空' },
+  ];
+  function filterOpOptions() {
+    return FILTER_OPS.map((o) => '<option value="' + o.v + '">' + o.t + '</option>').join('');
+  }
+
+  function makeFilterRow(cols) {
+    const row = document.createElement('div');
+    row.className = 'mindmap-filter-row';
+
+    const logic = document.createElement('select');
+    logic.className = 'mindmap-filter-logic';
+    logic.title = '与上一条条件的组合逻辑';
+    logic.innerHTML = '<option value="and">且</option><option value="or">或</option>';
+
+    const col = document.createElement('select');
+    col.className = 'mindmap-filter-col';
+    col.innerHTML = '<option value="-1">（选择列）</option>' +
+      Array.from({ length: cols }, (_, c) => '<option value="' + c + '">' + columnLabel(c) + '</option>').join('');
+
+    const op = document.createElement('select');
+    op.className = 'mindmap-filter-op';
+    op.innerHTML = filterOpOptions();
+
+    const val = document.createElement('input');
+    val.type = 'text';
+    val.className = 'mindmap-filter-val';
+    val.placeholder = '筛选值';
+    val.spellcheck = false;
+
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'mindmap-level-remove';
+    rm.textContent = '×';
+    rm.title = '移除该条件';
+    rm.addEventListener('click', () => row.remove());
+
+    op.addEventListener('change', () => {
+      val.disabled = (op.value === 'notEmpty' || op.value === 'empty');
+    });
+
+    row.appendChild(logic);
+    row.appendChild(col);
+    row.appendChild(op);
+    row.appendChild(val);
+    row.appendChild(rm);
+    return row;
+  }
+
+  function setFilterRowState(row, state, cols) {
+    row.querySelector('.mindmap-filter-logic').value = state.logic || 'and';
+    row.querySelector('.mindmap-filter-col').value = (Number(state.col) >= 0 && Number(state.col) < cols) ? String(state.col) : '-1';
+    const opEl = row.querySelector('.mindmap-filter-op');
+    opEl.value = state.op || 'contains';
+    row.querySelector('.mindmap-filter-val').value = state.val || '';
+    row.querySelector('.mindmap-filter-val').disabled = (opEl.value === 'notEmpty' || opEl.value === 'empty');
+  }
+
+  function rebuildFilterRows(cols) {
+    const prev = Array.from(mindMapFilters.querySelectorAll('.mindmap-filter-row')).map((row) => ({
+      logic: row.querySelector('.mindmap-filter-logic').value,
+      col: row.querySelector('.mindmap-filter-col').value,
+      op: row.querySelector('.mindmap-filter-op').value,
+      val: row.querySelector('.mindmap-filter-val').value,
+    }));
+    mindMapFilters.innerHTML = '';
+    const n = Math.max(1, prev.length);
+    for (let i = 0; i < n; i++) {
+      const row = makeFilterRow(cols);
+      setFilterRowState(row, prev[i] || { logic: 'and', col: '-1', op: 'contains', val: '' }, cols);
+      mindMapFilters.appendChild(row);
+    }
+  }
+
+  function rebuildColumnSelects() {
+    const cols = mindMapState.cols;
+    mindMapRootCol.innerHTML = '<option value="-1">（固定标题）</option>' +
+      Array.from({ length: cols }, (_, c) => '<option value="' + c + '">' + columnLabel(c) + '</option>').join('');
+    mindMapRootCol.value = '-1';
+
+    const existing = Array.from(mindMapLevels.querySelectorAll('select')).map((s) => s.value);
+    mindMapLevels.innerHTML = '';
+    const n = Math.max(3, existing.length);
+    for (let i = 0; i < n; i++) {
+      const v = (existing[i] != null && Number(existing[i]) >= 0 && Number(existing[i]) < cols) ? existing[i] : '-1';
+      mindMapLevels.appendChild(makeLevelRow(cols, v, true));
+    }
+
+    mindMapLabelCol.innerHTML = columnOptionsHtml(cols, '（无标签列）');
+    mindMapLabelCol.value = cols > 0 ? '0' : '-1';
+
+    const labelCol = parseInt(mindMapLabelCol.value, 10);
+    const entExisting = Array.from(mindMapEntityCols.querySelectorAll('select')).map((s) => s.value);
+    mindMapEntityCols.innerHTML = '';
+    let entVals = entExisting.filter((v) => Number(v) >= 0 && Number(v) < cols);
+    if (!entVals.length) {
+      for (let c = 0; c < cols; c++) if (c !== labelCol) entVals.push(String(c));
+    }
+    if (!entVals.length) entVals.push('-1');
+    entVals.forEach((v) => mindMapEntityCols.appendChild(makeLevelRow(cols, v, true)));
+
+    const resExisting = Array.from(mindMapResultCols.querySelectorAll('select')).map((s) => s.value);
+    mindMapResultCols.innerHTML = '';
+    const resN = Math.max(1, resExisting.length);
+    for (let i = 0; i < resN; i++) {
+      const v = (resExisting[i] != null && Number(resExisting[i]) >= 0 && Number(resExisting[i]) < cols) ? resExisting[i] : '-1';
+      mindMapResultCols.appendChild(makeLevelRow(cols, v, true));
+    }
+
+    const condExisting = Array.from(mindMapCondLevels.querySelectorAll('select')).map((s) => s.value);
+    mindMapCondLevels.innerHTML = '';
+    const condN = Math.max(3, condExisting.length);
+    for (let i = 0; i < condN; i++) {
+      const v = (condExisting[i] != null && Number(condExisting[i]) >= 0 && Number(condExisting[i]) < cols) ? condExisting[i] : '-1';
+      mindMapCondLevels.appendChild(makeLevelRow(cols, v, true));
+    }
+
+    rebuildFilterRows(cols);
+  }
+
+  function openMindMapWorkspace() {
+    renderMindMapSheetSelect();
+    renderMindMapRangeInputs();
+    renderMindMapPreview();
+    rebuildColumnSelects();
+    mindMapFilename.textContent = mindMapState.baseName + ' · ' + mindMapState.rows + ' 行 × ' + mindMapState.cols + ' 列';
+    previewFilename.textContent = mindMapState.baseName + ' · 思维导图';
+    mindMapResultFrame.srcdoc = '';
+    mindMapConflicts.hidden = true;
+    mindMapConflicts.innerHTML = '';
+    mindMapWorkspace.classList.remove('fs-config', 'fs-result');
+    downloadDone = false;
+    downloadIdleLabel = '下载 SVG';
+    downloadBtn.textContent = '下载 SVG';
+    downloadBtn.disabled = false;
+    setPreviewMode('mindmap');
+    previewPanel.classList.add('open');
+    document.body.classList.add('has-preview');
+    previewPanel._pendingTask = { type: 'mindmap', svg: '', baseName: mindMapState.baseName, statusEl: mindMapState.statusEl };
+    mindMapCurrentName = '';
+    clearMindMapDirty();
+  }
+
+  function buildRangeString() {
+    const a = mindMapRangeStart.value.trim();
+    const b = mindMapRangeEnd.value.trim();
+    if (a && b) return a + ':' + b;
+    if (a) return a;
+    return null;
+  }
+
+  async function refreshMindMapGrid() {
+    setStatus(mindMapState.statusEl, 'loading', '<div class="spinner"></div> 读取数据...');
+    const r = await window.api.readSheetGrid(mindMapState.srcPath, {
+      kind: mindMapState.kind,
+      sheetIndex: mindMapState.sheetIndex,
+      range: buildRangeString()
+    });
+    if (r.error) { setStatus(mindMapState.statusEl, 'error', r.error); return; }
+    Object.assign(mindMapState, { grid: r.grid, rows: r.rows, cols: r.cols, startCell: r.startCell, endCell: r.endCell });
+    renderMindMapPreview();
+    rebuildColumnSelects();
+  }
+
+  function wrapSvgHtml(svg) {
+    // 内联 SVG 里的 <script> 在 HTML iframe 中不会执行，这里把它抽出来改放到 HTML <script> 中，
+    // 折叠/展开按钮才能响应点击；同时给思维导图加上缩放/平移。
+    let collapseJs = '';
+    const scriptMatch = svg.match(/<script>([\s\S]*?)<\/script>/);
+    if (scriptMatch) {
+      collapseJs = scriptMatch[1]
+        .replace(/\/\/<!\[CDATA\[/g, '')
+        .replace(/\/\/\]\]>/g, '')
+        .trim();
+      svg = svg.replace(scriptMatch[0], '');
+    }
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+      + 'html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#fff;}'
+      + '#mm-vp{position:fixed;inset:0;overflow:hidden;background:#fff;}'
+      + '#mm-vp.dragging{cursor:grabbing;}'
+      + '#mm-ct{position:absolute;left:0;top:0;transform-origin:0 0;}'
+      + '#mm-ct svg{display:block;}'
+      + '#mm-tb{position:fixed;right:12px;top:12px;display:flex;flex-direction:column;gap:6px;z-index:10;}'
+      + '#mm-tb button{min-width:34px;height:32px;padding:0 8px;border:1px solid #d8c4a0;background:#fff;color:#5a3a1a;font-size:15px;line-height:1;border-radius:8px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);}'
+      + '#mm-tb button:hover{background:#f6ecd9;}'
+      + '#mm-hint{position:fixed;left:12px;bottom:12px;font:12px/1.4 sans-serif;color:#999;z-index:10;pointer-events:none;}'
+      + '</style></head><body>'
+      + '<div id="mm-vp"><div id="mm-ct">' + svg + '</div></div>'
+      + '<div id="mm-tb"><button id="mm-zi" title="放大">+</button><button id="mm-zo" title="缩小">−</button><button id="mm-zr" title="适应窗口">重置</button></div>'
+      + '<div id="mm-hint">滚轮缩放 · 拖动平移</div>'
+      + '<script>(function(){'
+      + 'var vp=document.getElementById("mm-vp"),ct=document.getElementById("mm-ct");'
+      + 'var svg=ct.querySelector("svg");if(!vp||!ct||!svg)return;'
+      + 'var scale=1,tx=0,ty=0,fitScale=1,MIN=0.05,MAX=8;'
+      + 'function nat(){var w=parseFloat(svg.getAttribute("width")),h=parseFloat(svg.getAttribute("height"));'
+      + 'if(!(w>0)||!(h>0)){var r=svg.getBoundingClientRect();w=r.width;h=r.height;}return{w:w,h:h};}'
+      + 'function apply(){ct.style.transform="translate("+tx+"px,"+ty+"px) scale("+scale+")";}'
+      + 'function center(){return{x:vp.clientWidth/2,y:vp.clientHeight/2};}'
+      + 'function setScale(s,recenter){s=Math.max(MIN,Math.min(MAX,s));scale=s;'
+      + 'if(recenter){var n=nat();tx=(vp.clientWidth-n.w*s)/2;ty=(vp.clientHeight-n.h*s)/2;}apply();}'
+      + 'function zoomAt(s,cx,cy){var ox=(cx-tx)/scale,oy=(cy-ty)/scale;'
+      + 'scale=Math.max(MIN,Math.min(MAX,s));tx=cx-ox*scale;ty=cy-oy*scale;apply();}'
+      + 'function fit(){var n=nat(),s=Math.min(vp.clientWidth/n.w,vp.clientHeight/n.h)*0.95;'
+      + 'if(!(s>0))s=1;fitScale=s;setScale(s,true);}'
+      + 'fit();'
+      + 'window.addEventListener("message",function(e){var d=e.data;'
+      + 'if(d&&d.type==="mm-zoom-set"){document.getElementById("mm-tb").style.display="none";'
+      + 'var pct=Number(d.pct)||100,c=center();zoomAt(fitScale*(pct/100),c.x,c.y);}});'
+      + 'document.getElementById("mm-zi").addEventListener("click",function(){var c=center();zoomAt(scale*1.2,c.x,c.y);});'
+      + 'document.getElementById("mm-zo").addEventListener("click",function(){var c=center();zoomAt(scale/1.2,c.x,c.y);});'
+      + 'document.getElementById("mm-zr").addEventListener("click",function(){fit();});'
+      + 'var dragging=false,sx=0,sy=0,stx=0,sty=0;'
+      + 'vp.addEventListener("mousedown",function(e){if(e.target.closest&&(e.target.closest(".nd")||e.target.closest(".bdg")))return;'
+      + 'dragging=true;sx=e.clientX;sy=e.clientY;stx=tx;sty=ty;vp.classList.add("dragging");e.preventDefault();});'
+      + 'window.addEventListener("mousemove",function(e){if(!dragging)return;tx=stx+(e.clientX-sx);ty=sty+(e.clientY-sy);apply();});'
+      + 'window.addEventListener("mouseup",function(){dragging=false;vp.classList.remove("dragging");});'
+      + 'vp.addEventListener("wheel",function(e){e.preventDefault();var f=e.deltaY<0?1.1:1/1.1;'
+      + 'var r=vp.getBoundingClientRect();zoomAt(scale*f,e.clientX-r.left,e.clientY-r.top);},{passive:false});'
+      + 'if(typeof ResizeObserver!=="undefined"){new ResizeObserver(function(){fit();}).observe(ct);}'
+      + '})();<\/script>'
+      + '<script>' + collapseJs + '<\/script>'
+      + '</body></html>';
+  }
+
+  function renderMindMapConflicts(conflicts) {
+    if (!conflicts || !conflicts.length) {
+      mindMapConflicts.hidden = true;
+      mindMapConflicts.innerHTML = '';
+      return;
+    }
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    let html = '<div class="mindmap-conflict-title">⚠ 检测到 ' + conflicts.length + ' 处条件冲突（同一组条件对应多个结果）：</div>';
+    for (const c of conflicts) {
+      html += '<div class="mindmap-conflict-item">';
+      html += '<div class="mindmap-conflict-cond">条件「' + esc(c.conds) + '」 → ' + c.results.length + ' 个不同结果：</div>';
+      for (const g of c.results) {
+        html += '<div class="mindmap-conflict-result">· 结果「' + esc(g.result) + '」 ← 第 ' + g.rows.join('、') + ' 行</div>';
+      }
+      html += '</div>';
+    }
+    mindMapConflicts.innerHTML = html;
+    mindMapConflicts.hidden = false;
+  }
+
+  async function handleMindMap(file, statusEl) {
+    const name = file.name.toLowerCase();
+    if (!name.endsWith('.csv') && !name.endsWith('.xlsx')) {
+      setStatus(statusEl, 'error', '请选择 .csv 或 .xlsx 格式文件');
+      return;
+    }
+    setStatus(statusEl, 'loading', '<div class="spinner"></div> 解析文件...');
+    const srcPath = safeGetFilePath(file);
+    if (!srcPath) {
+      setStatus(statusEl, 'error', '无法获取文件路径，请通过「点击选择」方式打开');
+      return;
+    }
+    try {
+      const r = await window.api.parseSpreadsheet(srcPath);
+      if (r.error) { setStatus(statusEl, 'error', r.error); return; }
+      if (!r.grid || !r.grid.length || !r.rows || !r.cols) {
+        setStatus(statusEl, 'error', '数据区域为空，无法生成思维导图');
+        return;
+      }
+      mindMapState = {
+        srcPath, kind: r.kind, sheets: r.sheets, sheetIndex: r.sheetIndex,
+        grid: r.grid, rows: r.rows, cols: r.cols,
+        startCell: r.startCell, endCell: r.endCell,
+        baseName: file.name.replace(/\.(csv|xlsx)$/i, ''),
+        statusEl, svg: ''
+      };
+      setStatus(statusEl, 'success', '文件已解析（' + r.rows + ' 行 × ' + r.cols + ' 列），在上方配置层级后点击「生成思维导图」');
+      openMindMapWorkspace();
+    } catch (err) {
+      setStatus(statusEl, 'error', err.message);
+    }
+  }
+
+  // 收集当前配置面板的生成参数；返回 { payload } 或 { error }
+  function collectMindMapPayload() {
+    const mode = document.querySelector('input[name="mindMapMode"]:checked').value;
+    const showCount = mindMapShowCount.checked;
+    const options = { fontSize: 16, hgap: 48, vgap: 14, maxLabelWidth: 220, maxDepth: 8, maxRows: 2000, layout: mindMapLayout };
+    // 数据筛选（可选）：多条件，每条可指定与上一条的「且/或」组合逻辑
+    const filter = [];
+    mindMapFilters.querySelectorAll('.mindmap-filter-row').forEach((row) => {
+      const col = parseInt(row.querySelector('.mindmap-filter-col').value, 10);
+      if (col < 0) return;
+      filter.push({
+        col,
+        op: row.querySelector('.mindmap-filter-op').value,
+        value: row.querySelector('.mindmap-filter-val').value.trim(),
+        logic: row.querySelector('.mindmap-filter-logic').value,
+      });
+    });
+    const filterArg = filter.length ? filter : null;
+    const rootTitle = mindMapRootTitle.value.trim() || (mode === 'decision' ? '店型计算' : '中心主题');
+    let payload;
+    if (mode === 'matrix') {
+      const labelCol = parseInt(mindMapLabelCol.value, 10);
+      const includeValues = mindMapIncludeValues.checked;
+      const entityCols = [];
+      mindMapEntityCols.querySelectorAll('select').forEach((sel) => {
+        const v = parseInt(sel.value, 10);
+        if (v >= 0 && v !== labelCol) entityCols.push(v);
+      });
+      payload = { mode: 'matrix', grid: mindMapState.grid, labelCol, entityCols, rootTitle, includeValues, showCount, options, filter: filterArg };
+    } else if (mode === 'decision') {
+      const resultCols = [];
+      mindMapResultCols.querySelectorAll('select').forEach((sel) => {
+        const v = parseInt(sel.value, 10);
+        if (v >= 0) resultCols.push(v);
+      });
+      const condCols = [];
+      mindMapCondLevels.querySelectorAll('select').forEach((sel) => {
+        const v = parseInt(sel.value, 10);
+        if (v >= 0 && !resultCols.includes(v)) condCols.push(v);
+      });
+      if (!resultCols.length) return { error: '请至少指定一个结果列（多列按顺序组成级联层级）' };
+      if (!condCols.length) return { error: '请至少指定一个条件列' };
+      const view = document.querySelector('input[name="mindMapDecisionView"]:checked').value;
+      payload = { mode: 'decision', grid: mindMapState.grid, resultCols, condCols, view, rootTitle, showCount, options, filter: filterArg };
+    } else {
+      const rootCol = parseInt(mindMapRootCol.value, 10);
+      const levels = [];
+      mindMapLevels.querySelectorAll('select').forEach((sel) => {
+        const v = parseInt(sel.value, 10);
+        if (v >= 0) levels.push(v);
+      });
+      if (!levels.length) return { error: '请至少指定一个层级列' };
+      payload = { mode: 'rows', grid: mindMapState.grid, levels, rootCol, rootTitle, showCount, options, filter: filterArg };
+    }
+    return { payload };
+  }
+
+  async function generateMindMap() {
+    const collected = collectMindMapPayload();
+    if (collected.error) { setStatus(mindMapState.statusEl, 'error', collected.error); return; }
+    const payload = collected.payload;
+    setStatus(mindMapState.statusEl, 'loading', '<div class="spinner"></div> 生成思维导图...');
+    const r = await window.api.buildMindMapSvg(payload);
+    if (r.error) { setStatus(mindMapState.statusEl, 'error', r.error); return; }
+    mindMapState.svg = r.svg;
+    loadFrame(mindMapResultFrame, wrapSvgHtml(r.svg));
+    renderMindMapConflicts(r.conflicts);
+    previewPanel._pendingTask = { type: 'mindmap', svg: r.svg, baseName: mindMapState.baseName, statusEl: mindMapState.statusEl };
+    const conflictCount = (r.conflicts && r.conflicts.length) || 0;
+    setStatus(mindMapState.statusEl, 'success',
+      conflictCount
+        ? '思维导图已生成（' + r.stats.nodes + ' 节点），检测到 ' + conflictCount + ' 处条件冲突（见预览上方提示）'
+        : '思维导图已生成（' + r.stats.nodes + ' 节点），点击「下载 SVG」保存');
+  }
+
+  // ====== 思维导图历史记录：保存 / 回溯 / 分屏 ======
+  const MM_HISTORY_MAX = 30;
+
+  // 脏标记：配置有未保存改动时，「保存」按钮才可点击；保存后恢复不可点击
+  let mindMapDirty = false;
+  let mindMapCurrentName = ''; // 当前工作区已保存的名称（Office 式「保存/另存」用）
+  let mindMapLayout = 'lr'; // 布局：'lr' = 左右放射，'td' = 上下层级
+  function markMindMapDirty() { mindMapDirty = true; mindMapSaveBtn.disabled = false; }
+  function clearMindMapDirty() { mindMapDirty = false; mindMapSaveBtn.disabled = true; }
+
+  function openSaveDialog(mode) {
+    mindMapSaveModalTitle.textContent = (mode === 'saveAs') ? '另存为' : '保存思维导图';
+    mindMapSaveModalHint.textContent = (mode === 'saveAs')
+      ? '以新名称保存一份副本，当前名称不会被覆盖'
+      : '输入名称保存当前配置与导图，之后可在「历史」中找回';
+    mindMapSaveModalName.value = mindMapCurrentName || '';
+    mindMapSaveModal.hidden = false;
+    mindMapSaveModal.classList.add('open');
+    setTimeout(() => mindMapSaveModalName.focus(), 0);
+  }
+
+  function closeSaveDialog() {
+    mindMapSaveModal.classList.remove('open');
+    mindMapSaveModal.hidden = true;
+  }
+
+  // 实际执行保存：把当前配置 + 数据快照 + 重新生成的 SVG 记为一条历史记录
+  async function doSaveMindMap(name) {
+    const collected = collectMindMapPayload();
+    if (collected.error) { setStatus(mindMapState.statusEl, 'error', collected.error); return false; }
+    const payload = collected.payload;
+    setStatus(mindMapState.statusEl, 'loading', '<div class="spinner"></div> 保存配置...');
+    const r = await window.api.buildMindMapSvg(payload);
+    if (r.error) { setStatus(mindMapState.statusEl, 'error', r.error); return false; }
+    mindMapState.svg = r.svg;
+    const sheet = (mindMapState.sheets || []).find((s) => s.index === mindMapState.sheetIndex);
+    const finalName = (name || '').trim() || mindMapState.baseName;
+    await saveMindMapRecord({
+      name: finalName,
+      ts: new Date().toLocaleString(),
+      baseName: mindMapState.baseName,
+      srcPath: mindMapState.srcPath,
+      sheets: mindMapState.sheets || [],
+      sheetIndex: mindMapState.sheetIndex,
+      sheetName: sheet ? sheet.name : '',
+      range: { startCell: mindMapState.startCell, endCell: mindMapState.endCell },
+      payload, svg: r.svg, stats: r.stats, conflicts: r.conflicts,
+    });
+    mindMapCurrentName = finalName;
+    clearMindMapDirty();
+    setStatus(mindMapState.statusEl, 'success', '已保存「' + finalName + '」到历史记录');
+    return true;
+  }
+
+  // 「保存」：已有名称 → 直接覆盖；首次保存 → 弹窗命名（Office 式）
+  async function saveCurrentMindMap() {
+    if (mindMapCurrentName) { await doSaveMindMap(mindMapCurrentName); }
+    else { openSaveDialog('save'); }
+  }
+
+  // 「另存」：总是弹窗，以新名称另存一份
+  function saveMindMapAs() { openSaveDialog('saveAs'); }
+
+  async function saveMindMapRecord(rec) {
+    rec.id = Date.now();
+    mindMapHistory.unshift(rec);
+    if (mindMapHistory.length > MM_HISTORY_MAX) mindMapHistory.length = MM_HISTORY_MAX;
+    try { await window.api.saveMindMapHistory(mindMapHistory); } catch (e) {}
+    renderMindMapHistory();
+  }
+
+  function renderMindMapHistory() {
+    mindMapHistoryList.innerHTML = '';
+    if (!mindMapHistory.length) {
+      const d = document.createElement('div');
+      d.className = 'mindmap-history-empty';
+      d.textContent = '暂无历史记录。点击右上角「保存」即可把当前配置存为一条历史记录。';
+      mindMapHistoryList.appendChild(d);
+      return;
+    }
+    mindMapHistory.forEach((rec) => {
+      const item = document.createElement('div');
+      item.className = 'mindmap-history-item';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'mindmap-history-check';
+      cb.title = '勾选后点击「打开选中」分屏查看（可勾选多个）';
+      cb._record = rec;
+
+      const info = document.createElement('div');
+      info.className = 'mindmap-history-info';
+      const name = document.createElement('div');
+      name.className = 'mindmap-history-name';
+      name.textContent = rec.name || (rec.baseName || '思维导图') + (rec.sheetName ? '（' + rec.sheetName + '）' : '');
+      const meta = document.createElement('div');
+      meta.className = 'mindmap-history-meta';
+      meta.textContent = (rec.ts || '') + ' · ' + historyMetaOf(rec);
+      info.append(name, meta);
+
+      // 单击该项（勾选框除外）→ 自动铺满窗口载入此记录
+      item.addEventListener('click', (e) => {
+        if (e.target === cb) return;
+        loadMindMapRecord(rec);
+      });
+
+      item.append(cb, info);
+      mindMapHistoryList.appendChild(item);
+    });
+  }
+
+  function historyMetaOf(rec) {
+    const p = rec.payload || {};
+    if (p.mode === 'decision') {
+      return '决策表 · ' + ((p.resultCols || []).length) + ' 结果 / ' + ((p.condCols || []).length) + ' 条件';
+    }
+    if (p.mode === 'matrix') return '矩阵 · ' + (p.labelCol != null && p.labelCol >= 0 ? '标签列' : '无标签');
+    return '行式 · ' + ((p.levels || []).length) + ' 层级';
+  }
+
+  function setLevelSelects(container, arr, minCount, draggable) {
+    container.innerHTML = '';
+    const cols = mindMapState.cols;
+    const n = Math.max(minCount, (arr || []).length);
+    for (let i = 0; i < n; i++) {
+      const v = (arr && arr[i] != null && Number(arr[i]) >= 0 && Number(arr[i]) < cols) ? String(arr[i]) : '-1';
+      container.appendChild(makeLevelRow(cols, v, draggable));
+    }
+  }
+
+  function setFilterRowsFromConfig(filterArr) {
+    mindMapFilters.innerHTML = '';
+    const cols = mindMapState.cols;
+    const arr = (filterArr && filterArr.length) ? filterArr : [null];
+    arr.forEach((f) => {
+      const row = makeFilterRow(cols);
+      if (f) setFilterRowState(row, { logic: f.logic, col: f.col, op: f.op, val: f.value }, cols);
+      else setFilterRowState(row, { logic: 'and', col: '-1', op: 'contains', val: '' }, cols);
+      mindMapFilters.appendChild(row);
+    });
+  }
+
+  // 依据历史记录里的配置，重建配置面板各控件
+  function applyMindMapConfig(p) {
+    const cols = mindMapState.cols;
+    mindMapRootCol.innerHTML = '<option value="-1">（固定标题）</option>' +
+      Array.from({ length: cols }, (_, c) => '<option value="' + c + '">' + columnLabel(c) + '</option>').join('');
+    mindMapRootCol.value = (p.rootCol != null && Number(p.rootCol) >= 0 && Number(p.rootCol) < cols) ? String(p.rootCol) : '-1';
+
+    mindMapLabelCol.innerHTML = columnOptionsHtml(cols, '（无标签列）');
+    mindMapLabelCol.value = (p.labelCol != null && Number(p.labelCol) >= 0 && Number(p.labelCol) < cols) ? String(p.labelCol) : (cols > 0 ? '0' : '-1');
+
+    setLevelSelects(mindMapLevels, p.levels, 3, true);
+
+    const entLabelCol = parseInt(mindMapLabelCol.value, 10);
+    if (p.entityCols && p.entityCols.length) {
+      setLevelSelects(mindMapEntityCols, p.entityCols, 1, true);
+    } else {
+      const def = [];
+      for (let c = 0; c < cols; c++) if (c !== entLabelCol) def.push(String(c));
+      setLevelSelects(mindMapEntityCols, def, 1, true);
+    }
+
+    setLevelSelects(mindMapResultCols, p.resultCols, 1, true);
+    setLevelSelects(mindMapCondLevels, p.condCols, 3, true);
+    setFilterRowsFromConfig(p.filter);
+
+    mindMapShowCount.checked = p.showCount !== false;
+    mindMapIncludeValues.checked = p.includeValues !== false;
+    mindMapRootTitle.value = p.rootTitle || '';
+    mindMapRootTitle.placeholder = (p.mode === 'decision' ? '店型计算' : '中心主题');
+
+    const mode = p.mode || 'rows';
+    const modeRadio = document.querySelector('input[name="mindMapMode"][value="' + mode + '"]');
+    if (modeRadio) modeRadio.checked = true;
+    const viewRadio = document.querySelector('input[name="mindMapDecisionView"][value="' + (p.view || 'tree') + '"]');
+    if (viewRadio) viewRadio.checked = true;
+
+    mindMapRowMode.hidden = (mode !== 'rows');
+    mindMapMatrixMode.hidden = (mode !== 'matrix');
+    mindMapDecisionMode.hidden = (mode !== 'decision');
+    mindMapViewGroup.hidden = (mode !== 'decision');
+  }
+
+  // 载入历史记录：恢复数据快照 + 配置，并立即重新生成
+  function loadMindMapRecord(rec) {
+    const p = rec.payload || {};
+    const grid = p.grid || rec.grid || [];
+    mindMapState.grid = grid;
+    mindMapState.rows = grid.length;
+    mindMapState.cols = grid[0] ? grid[0].length : 0;
+    mindMapState.baseName = rec.baseName || mindMapState.baseName;
+    if (rec.sheets && rec.sheets.length) mindMapState.sheets = rec.sheets;
+    mindMapState.sheetIndex = (rec.sheetIndex != null) ? rec.sheetIndex : mindMapState.sheetIndex;
+    mindMapState.startCell = (rec.range && rec.range.startCell) || '';
+    mindMapState.endCell = (rec.range && rec.range.endCell) || '';
+    mindMapState.svg = rec.svg || '';
+    mindMapCurrentName = rec.name || '';
+    renderMindMapSheetSelect();
+    renderMindMapRangeInputs();
+    renderMindMapPreview();
+    applyMindMapConfig(p);
+    mindMapFilename.textContent = mindMapState.baseName + ' · ' + mindMapState.rows + ' 行 × ' + mindMapState.cols + ' 列';
+    setPreviewMode('mindmap');
+    previewPanel.classList.add('open');
+    document.body.classList.add('has-preview');
+    mindMapHistoryModal.classList.remove('open');
+    mindMapHistoryModal.hidden = true;
+    generateMindMap();
+    clearMindMapDirty();
+  }
+
+  // 分屏查看选中历史记录（参考多文件入口）
+  function createMindMapPane(rec) {
+    const pane = document.createElement('div');
+    pane.className = 'pane';
+    pane._record = rec;
+
+    const header = document.createElement('div');
+    header.className = 'pane-header';
+    const name = document.createElement('span');
+    name.className = 'pane-name';
+    name.textContent = (rec.name || rec.baseName || '思维导图') + ' · ' + (rec.ts || '');
+    name.title = rec.name || (rec.sheetName ? (rec.baseName + '（' + rec.sheetName + '）') : (rec.baseName || ''));
+
+    const load = document.createElement('button');
+    load.className = 'pane-btn';
+    load.textContent = '载入配置';
+    load.title = '将此历史配置与数据载入配置面板';
+    load.addEventListener('click', () => loadMindMapRecord(rec));
+
+    const fs = document.createElement('button');
+    fs.className = 'pane-btn pane-fs-btn';
+    fs.textContent = '全屏';
+    fs.title = '放大此分屏查看';
+    fs.addEventListener('click', () => togglePaneFullscreen(pane));
+
+    const dl = document.createElement('button');
+    dl.className = 'pane-btn pane-dl-btn';
+    dl.textContent = '下载';
+    dl.title = '下载此思维导图为 SVG';
+    dl.addEventListener('click', async () => {
+      await window.api.saveMindMapSvg(rec.svg || '', ((rec.name || rec.baseName) || '思维导图') + '.svg');
+    });
+
+    const close = document.createElement('button');
+    close.className = 'pane-btn pane-close';
+    close.textContent = '×';
+    close.title = '关闭此分屏';
+    close.addEventListener('click', () => closeMindMapPane(pane));
+
+    header.append(name, load, fs, dl, close);
+    const body = document.createElement('div');
+    body.className = 'pane-body';
+    const iframe = document.createElement('iframe');
+    iframe.className = 'pane-iframe';
+    body.appendChild(iframe);
+    pane.append(header, body);
+
+    loadFrame(iframe, wrapSvgHtml(rec.svg || ''));
+    return pane;
+  }
+
+  function closeMindMapPane(pane) {
+    const task = previewPanel._pendingTask;
+    if (!task || task.type !== 'mindmap-split') return;
+    const i = (task.records || []).indexOf(pane._record);
+    if (i >= 0) task.records.splice(i, 1);
+    if (!task.records.length) { closePreview(); return; }
+    renderMindMapSplit(task.records);
+    previewFilename.textContent = task.records.length + ' 条历史记录';
+  }
+
+  function renderMindMapSplit(records) {
+    previewGrid.innerHTML = '';
+    previewGrid.classList.remove('has-fs-pane');
+    const n = records.length;
+    const g = computeMultiGrid(n);
+    previewGrid.classList.toggle('two-rows', g.rows === 2);
+    if (g.rows === 2) {
+      const topRow = document.createElement('div');
+      topRow.className = 'grid-row top';
+      topRow.style.gridTemplateColumns = 'repeat(' + g.cols + ', 1fr)';
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'grid-row bottom';
+      bottomRow.style.gridTemplateColumns = 'repeat(' + g.cols + ', 1fr)';
+      previewGrid.append(topRow, bottomRow);
+      const half = Math.ceil(n / 2);
+      records.forEach((rec, i) => (i < half ? topRow : bottomRow).appendChild(createMindMapPane(rec)));
+    } else {
+      records.forEach((rec) => previewGrid.appendChild(createMindMapPane(rec)));
+    }
+    updateGridLayoutBtn();
+  }
+
+  // 打开历史记录弹窗
+  mindMapHistoryBtn.addEventListener('click', () => {
+    renderMindMapHistory();
+    mindMapHistoryModal.hidden = false;
+    mindMapHistoryModal.classList.add('open');
+  });
+  mindMapHistoryModalClose.addEventListener('click', () => {
+    mindMapHistoryModal.classList.remove('open');
+    mindMapHistoryModal.hidden = true;
+  });
+
+  // 勾选多条历史记录后从左到右分屏查看
+  function openMindMapSplit(recs) {
+    previewPanel._pendingTask = { type: 'mindmap-split', records: recs.slice(), statusEl: mindMapState.statusEl };
+    setPreviewMode('mindmap-split');
+    renderMindMapSplit(recs);
+    previewFilename.textContent = recs.length + ' 条历史记录';
+    previewPanel.classList.add('open');
+    document.body.classList.add('has-preview');
+    updateWatch();
+  }
+
+  // 「打开选中」：选 1 条铺满窗口，选多条分屏查看
+  mindMapHistoryOpenBtn.addEventListener('click', () => {
+    const recs = Array.from(mindMapHistoryList.querySelectorAll('.mindmap-history-check:checked')).map((cb) => cb._record);
+    if (!recs.length) {
+      setStatus(mindMapState.statusEl, 'error', '请先勾选要打开的历史记录');
+      return;
+    }
+    mindMapHistoryModal.classList.remove('open');
+    mindMapHistoryModal.hidden = true;
+    if (recs.length === 1) loadMindMapRecord(recs[0]);
+    else openMindMapSplit(recs);
+  });
+
+  mindMapHistoryModalClear.addEventListener('click', () => {
+    if (!mindMapHistory.length) return;
+    mindMapHistory = [];
+    window.api.saveMindMapHistory(mindMapHistory).catch(() => {});
+    renderMindMapHistory();
+  });
+
+  // 启动时加载历史记录
+  (async function loadMindMapHistory() {
+    try {
+      const recs = await window.api.loadMindMapHistory();
+      if (Array.isArray(recs)) mindMapHistory = recs;
+      renderMindMapHistory();
+    } catch (e) {}
+  })();
+
+  // 思维导图配置区事件
+  mindMapSheetSelect.addEventListener('change', () => {
+    mindMapState.sheetIndex = parseInt(mindMapSheetSelect.value, 10);
+    refreshMindMapGrid();
+  });
+  mindMapRangeReset.addEventListener('click', () => {
+    mindMapRangeStart.value = '';
+    mindMapRangeEnd.value = '';
+    refreshMindMapGrid();
+  });
+  mindMapRangeStart.addEventListener('change', () => { if (mindMapRangeEnd.value.trim()) refreshMindMapGrid(); });
+  mindMapRangeEnd.addEventListener('change', () => { if (mindMapRangeStart.value.trim()) refreshMindMapGrid(); });
+  mindMapLabelCol.addEventListener('change', () => {
+    // 标签列变化时，主体列默认重置为「除标签列外的所有列」（保持矩阵「列即主体」语义）
+    const cols = mindMapState.cols;
+    const labelCol = parseInt(mindMapLabelCol.value, 10);
+    const def = [];
+    for (let c = 0; c < cols; c++) if (c !== labelCol) def.push(String(c));
+    mindMapEntityCols.innerHTML = '';
+    (def.length ? def : ['-1']).forEach((v) => mindMapEntityCols.appendChild(makeLevelRow(cols, v, true)));
+  });
+  mindMapAddLevel.addEventListener('click', () => {
+    if (mindMapLevels.querySelectorAll('.mindmap-level-row').length >= 8) return;
+    mindMapLevels.appendChild(makeLevelRow(mindMapState.cols, '-1', true));
+  });
+  mindMapAddEntityCol.addEventListener('click', () => {
+    if (mindMapEntityCols.querySelectorAll('.mindmap-level-row').length >= 8) return;
+    mindMapEntityCols.appendChild(makeLevelRow(mindMapState.cols, '-1', true));
+  });
+  mindMapAddCondLevel.addEventListener('click', () => {
+    if (mindMapCondLevels.querySelectorAll('.mindmap-level-row').length >= 8) return;
+    mindMapCondLevels.appendChild(makeLevelRow(mindMapState.cols, '-1', true));
+  });
+  mindMapAddResultCol.addEventListener('click', () => {
+    if (mindMapResultCols.querySelectorAll('.mindmap-level-row').length >= 4) return;
+    mindMapResultCols.appendChild(makeLevelRow(mindMapState.cols, '-1', true));
+  });
+  mindMapAddFilter.addEventListener('click', () => {
+    mindMapFilters.appendChild(makeFilterRow(mindMapState.cols));
+  });
+  document.querySelectorAll('input[name="mindMapMode"]').forEach((rd) => {
+    rd.addEventListener('change', () => {
+      const mode = document.querySelector('input[name="mindMapMode"]:checked').value;
+      mindMapRowMode.hidden = (mode !== 'rows');
+      mindMapMatrixMode.hidden = (mode !== 'matrix');
+      mindMapDecisionMode.hidden = (mode !== 'decision');
+      mindMapViewGroup.hidden = (mode !== 'decision');
+      mindMapRootTitle.placeholder = (mode === 'decision' ? '店型计算' : '中心主题');
+    });
+  });
+  enableRowDrag(mindMapLevels);
+  enableRowDrag(mindMapEntityCols);
+  enableRowDrag(mindMapResultCols);
+  enableRowDrag(mindMapCondLevels);
+  mindMapGenerateBtn.addEventListener('click', generateMindMap);
+  mindMapLayoutBtn.addEventListener('click', () => {
+    mindMapLayout = mindMapLayout === 'td' ? 'lr' : 'td';
+    mindMapLayoutBtn.textContent = mindMapLayout === 'td' ? '⇅ 上下' : '⬌ 左右';
+    markMindMapDirty();
+    // 已有生成结果时立即按新布局重绘，便于即时对比
+    if (mindMapState.grid) generateMindMap();
+  });
+  // 视图选项（聚合计数 / 决策视图）改动：标记脏 + 已有结果时立即重绘
+  mindMapShowCount.addEventListener('change', () => {
+    markMindMapDirty();
+    if (mindMapState.grid) generateMindMap();
+  });
+  document.querySelectorAll('input[name="mindMapDecisionView"]').forEach((rd) => {
+    rd.addEventListener('change', () => {
+      markMindMapDirty();
+      if (mindMapState.grid) generateMindMap();
+    });
+  });
+  mindMapSaveBtn.addEventListener('click', saveCurrentMindMap);
+  mindMapSaveAsBtn.addEventListener('click', saveMindMapAs);
+  mindMapSaveModalConfirm.addEventListener('click', async () => {
+    const ok = await doSaveMindMap(mindMapSaveModalName.value);
+    if (ok) closeSaveDialog();
+  });
+  mindMapSaveModalCancel.addEventListener('click', closeSaveDialog);
+  mindMapSaveModalClose.addEventListener('click', closeSaveDialog);
+  mindMapSaveModalName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') mindMapSaveModalConfirm.click();
+    else if (e.key === 'Escape') closeSaveDialog();
+  });
+
+  // 配置区任意修改 → 标记为「有未保存改动」，右上角「保存」按钮变为可点击
+  function onMindMapConfigDirty() { markMindMapDirty(); }
+  mindMapConfig.addEventListener('input', onMindMapConfigDirty);
+  mindMapConfig.addEventListener('change', onMindMapConfigDirty);
+  mindMapConfig.addEventListener('click', (e) => {
+    const t = e.target;
+    if (t && (t.closest('.mindmap-level-remove') || t.closest('.merge-btn-add'))) markMindMapDirty();
+  });
+  // 上下两层各自放大全屏查看（再次点击还原为上下分栏）
+  function toggleMindMapPane(pane) {
+    if (mindMapWorkspace.classList.contains('fs-' + pane)) {
+      mindMapWorkspace.classList.remove('fs-config', 'fs-result');
+    } else {
+      mindMapWorkspace.classList.remove('fs-config', 'fs-result');
+      mindMapWorkspace.classList.add('fs-' + pane);
+    }
+  }
+  mindMapConfigFsBtn.addEventListener('click', () => toggleMindMapPane('config'));
+  mindMapResultFsBtn.addEventListener('click', () => toggleMindMapPane('result'));
+  mindMapPreviewFsBtn.addEventListener('click', openMindMapPreviewFullscreen);
+
+  setupDropZone(
+    document.getElementById('dropZoneMindMap'),
+    document.getElementById('fileInputMindMap'),
+    document.getElementById('statusMindMap'),
+    handleMindMap
+  );
 </script>
 </body>
 </html>

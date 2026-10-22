@@ -7,6 +7,7 @@ const { Packer } = require('docx');
 const sharp = require('sharp');
 const { pathToFileURL } = require('url');
 const { convertDocxToMarkdown, convertDocxToHtml } = require('./docx2md');
+const { parseSpreadsheetFile, readSheetGrid, buildTree, buildMatrixTree, buildDecisionTree, findDecisionConflicts, buildMindMapSvg, filterGrid } = require('./mindmap');
 
 // Mermaid 库本地化：随应用分发的本地 mermaid.min.js，避免依赖 CDN
 const MERMAID_SRC = pathToFileURL(path.join(__dirname, 'renderer', 'mermaid.min.js')).href;
@@ -1175,5 +1176,72 @@ ipcMain.handle('save-docx-html', async (event, srcPath, editedHtml) => {
   } catch (error) {
     safeLog('save-docx-html error:', error);
     throw error;
+  }
+});
+
+// ===================== Excel/CSV → SVG 思维导图 =====================
+ipcMain.handle('parse-spreadsheet', async (_event, srcPath) => {
+  return parseSpreadsheetFile(srcPath);
+});
+
+ipcMain.handle('read-sheet-grid', async (_event, srcPath, opts) => {
+  return readSheetGrid(srcPath, opts);
+});
+
+ipcMain.handle('build-mindmap-svg', async (_event, payload) => {
+  const { mode, grid, levels, rootCol, rootTitle, labelCol, includeValues, resultCol, resultCols, condCols, view, showCount, options, filter } = payload || {};
+  try {
+    const filtered = filterGrid(grid, filter);
+    if (filtered.length <= 1) {
+      return { error: '筛选后没有匹配的数据行' };
+    }
+    let tree, stats;
+    if (mode === 'matrix') {
+      ({ tree, stats } = buildMatrixTree(filtered, { labelCol, rootTitle, includeValues, maxRows: options && options.maxRows }));
+    } else if (mode === 'decision') {
+      ({ tree, stats } = buildDecisionTree(filtered, { resultCols, resultCol, condCols, view, rootTitle, maxRows: options && options.maxRows }));
+      const conflicts = findDecisionConflicts(filtered, { resultCols, resultCol, condCols });
+      const svg = buildMindMapSvg(tree, { ...(options || {}), showCount });
+      return { svg, stats, conflicts };
+    } else {
+      ({ tree, stats } = buildTree(filtered, { levels, rootCol, rootTitle, maxDepth: options && options.maxDepth, maxRows: options && options.maxRows }));
+    }
+    const svg = buildMindMapSvg(tree, { ...(options || {}), showCount });
+    return { svg, stats };
+  } catch (error) {
+    safeLog('build-mindmap-svg error:', error);
+    return { error: error.message };
+  }
+});
+
+ipcMain.handle('save-mindmap-svg', async (_event, { svg, defaultName }) => {
+  try {
+    const { filePath, canceled } = await dialog.showSaveDialog({
+      defaultPath: defaultName || '思维导图.svg',
+      filters: [{ name: 'SVG', extensions: ['svg'] }]
+    });
+    if (canceled || !filePath) return { success: false };
+    fs.writeFileSync(filePath, svg, 'utf-8');
+    return { success: true, filePath };
+  } catch (error) {
+    safeLog('save-mindmap-svg error:', error);
+    throw error;
+  }
+});
+
+// ====== 思维导图历史记录：保存配置 + 数据快照，供回溯 / 分屏查看 ======
+const mmHistoryPath = path.join(app.getPath('userData'), 'mindmap-history.json');
+ipcMain.handle('mindmap-history-load', async () => {
+  try {
+    if (fs.existsSync(mmHistoryPath)) return JSON.parse(fs.readFileSync(mmHistoryPath, 'utf-8'));
+  } catch (e) {}
+  return [];
+});
+ipcMain.handle('mindmap-history-save', async (_event, records) => {
+  try {
+    fs.writeFileSync(mmHistoryPath, JSON.stringify(records || []), 'utf-8');
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.message };
   }
 });

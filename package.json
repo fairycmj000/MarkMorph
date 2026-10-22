@@ -40,6 +40,7 @@
       "preload.js",
       "converter.js",
       "docx2md.js",
+      "mindmap.js",
       "renderer/**"
     ],
     "win": {
