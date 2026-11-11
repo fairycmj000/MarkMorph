@@ -846,8 +846,13 @@
       </ul>
       <p><b>搜索与替换</b></p>
       <ul>
+        <li><b>修复跨格式 / 英文多词短语搜不到</b>：加粗、链接、代码、彩色文字等内联格式会把一段文本拆成碎片导致搜索漏检，现已跨格式边界整体匹配</li>
         <li><b>搜索定位</b>：预览中按 <b>Ctrl+F</b>（或点 🔍）呼出搜索框，关键字逐条高亮定位</li>
         <li><b>替换</b>：编辑态下支持「替换当前 / 全部替换」；多文件分屏每个分屏可独立搜索 + 替换，只读分屏点「替换」会自动切入编辑态再执行</li>
+      </ul>
+      <p><b>章节目录定位</b></p>
+      <ul>
+        <li><b>补全 H6 标题 + 优化滚动定位</b>：低级标题（H6）此前不在目录里、点击定位有偏差；现已补全并做滚动收尾校正，跳转更精准</li>
       </ul>
       <p><b>编辑可撤销 / 重做</b></p>
       <ul>
@@ -865,8 +870,8 @@
         <li><b>MD → PDF</b>：先预览排版，再下载 PDF（自动生成书签目录）</li>
         <li><b>MD → HTML</b>：转换为网页并自动在浏览器中打开</li>
         <li><b>MD → Word</b>：转换为 <code>.docx</code>，可用 Word / WPS 继续编辑</li>
-        <li><b>Word → MD</b>：把 <code>.docx</code> 无损转换为 <code>.md</code>，图片提取到 <code>assets/</code> 子文件夹，嵌入的 Excel 电子表格渲染为表格，预览确认后下载</li>
-        <li><b>Word → HTML</b>：把 <code>.docx</code> 无损转换为 <code>.html</code>（图片内联、单文件自包含），预览确认后下载并在浏览器打开</li>
+        <li><b>Word → MD</b>：把 <code>.docx</code> 高保真转换为 <code>.md</code>，图片提取到 <code>assets/</code> 子文件夹，嵌入的 Excel 电子表格渲染为表格，预览确认后下载</li>
+        <li><b>Word → HTML</b>：把 <code>.docx</code> 高保真转换为 <code>.html</code>（图片内联、单文件自包含），预览确认后下载并在浏览器打开</li>
         <li><b>Word → PDF</b>：把 <code>.docx</code> 高保真转换为 <code>.pdf</code>（还原表格颜色/合并、嵌入 Excel、图片、流程图、文本树），预览确认后下载</li>
         <li><b>多文件</b>：多个 <code>.md</code> 分屏并列预览，可编辑保存，并合并下载为 HTML / PDF / Word</li>
       </ul>
@@ -1010,7 +1015,7 @@
       <div class="drop-icon">📥</div>
       <div class="drop-text">
         拖入或点击选择 .docx 文件
-        <span>无损转换为 Markdown 文档</span>
+        <span>高保真转换为 Markdown 文档</span>
       </div>
     </div>
     <div class="status hidden" id="statusDocx"></div>
@@ -1023,7 +1028,7 @@
       <div class="drop-icon">🌐</div>
       <div class="drop-text">
         拖入或点击选择 .docx 文件
-        <span>无损转换为 HTML 网页</span>
+        <span>高保真转换为 HTML 网页</span>
       </div>
     </div>
     <div class="status hidden" id="statusDocxHtml"></div>
