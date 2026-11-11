@@ -19,8 +19,10 @@ contextBridge.exposeInMainWorld('api', {
   convertDocxToMd: (srcPath) => ipcRenderer.invoke('convert-docx-to-md', srcPath),
   saveDocxMd: (srcPath, editedContent) => ipcRenderer.invoke('save-docx-md', srcPath, editedContent),
   // Word → HTML：预览走专用 HTML 转换（表格/嵌入 Excel 保留颜色与合并），下载时另存为自包含 .html
-  convertDocxToHtml: (srcPath) => ipcRenderer.invoke('convert-docx-to-html', srcPath),
+  convertDocxToHtml: (srcPath, opts) => ipcRenderer.invoke('convert-docx-to-html', srcPath, opts),
   saveDocxHtml: (srcPath, editedHtml) => ipcRenderer.invoke('save-docx-html', srcPath, editedHtml),
+  // Word → PDF：预览复用 Word→HTML 的高保真 HTML，下载时经 printToPDF 输出 .pdf（自动加书签、宽表 A3）
+  saveDocxPdf: (srcPath) => ipcRenderer.invoke('save-docx-pdf', srcPath),
   downloadPdf: (mdContent, filename, srcPath) => ipcRenderer.invoke('download-pdf', { mdContent, filename, srcPath }),
   resizeLayout: (mode) => ipcRenderer.invoke('resize-layout', mode),
   selectBackground: () => ipcRenderer.invoke('select-background'),
@@ -31,13 +33,6 @@ contextBridge.exposeInMainWorld('api', {
   resetBackground: () => ipcRenderer.invoke('reset-background'),
   readMdFile: (filePath) => ipcRenderer.invoke('read-md-file', filePath),
   writeMdFile: (filePath, content) => ipcRenderer.invoke('write-md-file', { filePath, content }),
-  // Excel/CSV → 思维导图
-  parseSpreadsheet: (srcPath) => ipcRenderer.invoke('parse-spreadsheet', srcPath),
-  readSheetGrid: (srcPath, opts) => ipcRenderer.invoke('read-sheet-grid', srcPath, opts),
-  buildMindMapSvg: (payload) => ipcRenderer.invoke('build-mindmap-svg', payload),
-  saveMindMapSvg: (svg, defaultName) => ipcRenderer.invoke('save-mindmap-svg', { svg, defaultName }),
-  loadMindMapHistory: () => ipcRenderer.invoke('mindmap-history-load'),
-  saveMindMapHistory: (records) => ipcRenderer.invoke('mindmap-history-save', records),
   onOpenFile: (cb) => ipcRenderer.on('open-file', (_event, filePaths) => cb(filePaths)),
   watchFile: (filePath) => ipcRenderer.invoke('watch-file', filePath),
   unwatchFile: (filePath) => ipcRenderer.invoke('unwatch-file', filePath),

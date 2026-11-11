@@ -170,9 +170,45 @@ function parseNumbering(numberingXml) {
 }
 
 // ===================== 内联格式渲染 =====================
-function wrap(s, bold, italic) {
-  if (!bold && !italic) return s;
-  // 用内联 HTML（<strong>/<em>）而非 Markdown 的 **/*：中文文本里加粗若以标点结尾、
+// Word 高亮色名 → CSS 背景色（<w:highlight w:val="yellow"> 的兼容映射）
+const HIGHLIGHT_COLORS = {
+  yellow: '#FFFF00', green: '#00FF00', cyan: '#00FFFF', magenta: '#FF00FF',
+  blue: '#0000FF', red: '#FF0000', darkBlue: '#000080', darkCyan: '#008080',
+  darkGreen: '#008000', darkMagenta: '#800080', darkRed: '#800000',
+  darkYellow: '#808000', darkGray: '#808080', lightGray: '#C0C0C0', black: '#000000', white: '#FFFFFF'
+};
+
+// 提取 run 的字体色（w:rPr/w:color）——返回 6 位大写十六进制或 ''
+function runColor(rPr) {
+  if (!rPr) return '';
+  const c = findChild(rPr, 'color');
+  if (!c) return '';
+  const v = attr(c, '@_val') || '';
+  return /^[0-9A-Fa-f]{6}$/.test(v) ? v.toUpperCase() : '';
+}
+
+// 提取 run 的文字底纹/高亮——优先 w:shd/@_fill（十六进制），其次 w:highlight 命名色
+function runHighlight(rPr) {
+  if (!rPr) return '';
+  const shd = findChild(rPr, 'shd');
+  if (shd) {
+    const fill = attr(shd, '@_fill') || '';
+    if (/^[0-9A-Fa-f]{6}$/.test(fill)) return fill.toUpperCase();
+  }
+  const hl = findChild(rPr, 'highlight');
+  if (hl) {
+    const v = attr(hl, '@_val') || '';
+    const c = HIGHLIGHT_COLORS[v];
+    if (c) return c.replace('#', '');
+  }
+  return '';
+}
+
+function wrap(s, bold, italic, color, highlight) {
+  const hasColor = !!color;
+  const hasHighlight = !!highlight;
+  if (!bold && !italic && !hasColor && !hasHighlight) return s;
+  // 用内联 HTML（<strong>/<em>/<span>）而非 Markdown 的 **/*：中文文本里加粗若以标点结尾、
   // 后接汉字（如 `**标签：**正文`），CommonMark 左右侧翼规则会判定结束标记无法闭合，
   // 把 ** 泄漏成字面字符；HTML 标签不受此规则影响，且 marked 会原样透传。
   // 内容先做 HTML 转义，避免 Word 文本里的 < > & 被误当成标签或实体。
@@ -181,10 +217,16 @@ function wrap(s, bold, italic) {
   const core = s.slice(lead.length, s.length - trail.length);
   if (!core) return s;
   const esc = escapeHtml(core);
-  let out;
-  if (italic && bold) out = '<strong><em>' + esc + '</em></strong>';
-  else if (bold) out = '<strong>' + esc + '</strong>';
-  else out = '<em>' + esc + '</em>';
+  let out = esc;
+  if (italic && bold) out = '<strong><em>' + out + '</em></strong>';
+  else if (bold) out = '<strong>' + out + '</strong>';
+  else if (italic) out = '<em>' + out + '</em>';
+  if (hasColor || hasHighlight) {
+    const styles = [];
+    if (hasColor) styles.push('color:#' + color);
+    if (hasHighlight) styles.push('background-color:#' + highlight);
+    out = '<span style="' + styles.join(';') + '">' + out + '</span>';
+  }
   return lead + out + trail;
 }
 function hasOn(rPr, tag) {
@@ -336,6 +378,8 @@ async function runParts(rNode, ctx) {
   const rPr = findChild(rNode, 'rPr');
   const bold = hasOn(rPr, 'b');
   const italic = hasOn(rPr, 'i');
+  const color = runColor(rPr);
+  const highlight = runHighlight(rPr);
   const kids = childrenOf(rNode).filter((c) => nodeTag(c) !== 'rPr');
   let text = '';
   let extra = '';
@@ -350,7 +394,7 @@ async function runParts(rNode, ctx) {
     else if (t === 'pict') extra += await renderPict(k, ctx);
     // instrText / fldChar / delText / sym 等忽略
   }
-  return { text, extra, bold, italic };
+  return { text, extra, bold, italic, color, highlight };
 }
 
 async function renderInlines(children, ctx) {
@@ -360,12 +404,16 @@ async function renderInlines(children, ctx) {
   let buf = '';
   let bufBold = false;
   let bufItalic = false;
+  let bufColor = '';
+  let bufHighlight = '';
   const flush = () => {
     if (buf) {
-      out += wrap(buf, bufBold, bufItalic);
+      out += wrap(buf, bufBold, bufItalic, bufColor, bufHighlight);
       buf = '';
       bufBold = false;
       bufItalic = false;
+      bufColor = '';
+      bufHighlight = '';
     }
   };
   for (const c of children) {
@@ -374,24 +422,28 @@ async function renderInlines(children, ctx) {
       flush();
       out += nodeVal(c);
     } else if (t === 'r') {
-      const { text, extra, bold, italic } = await runParts(c, ctx);
+      const { text, extra, bold, italic, color, highlight } = await runParts(c, ctx);
       if (extra) {
         // 含图片/对象等非文本内容：不参与合并，先 flush 再单独输出
         flush();
-        if (text) out += wrap(text, bold, italic);
+        if (text) out += wrap(text, bold, italic, color, highlight);
         if (text && extra) out += ' ';
         out += extra;
       } else if (text === '') {
         // 空 run：忽略
-      } else if (buf !== '' && (bold !== bufBold || italic !== bufItalic)) {
+      } else if (buf !== '' && (bold !== bufBold || italic !== bufItalic || color !== bufColor || highlight !== bufHighlight)) {
         flush();
         buf = text;
         bufBold = bold;
         bufItalic = italic;
+        bufColor = color;
+        bufHighlight = highlight;
       } else {
         buf += text;
         bufBold = bold;
         bufItalic = italic;
+        bufColor = color;
+        bufHighlight = highlight;
       }
     } else if (t === 'hyperlink') {
       flush();
@@ -460,7 +512,7 @@ async function renderHtmlObject(oNode, ctx) {
     const f = ctx.zip.file(zipPath);
     if (f) {
       const buf = await f.async('nodebuffer');
-      const table = await renderXlsxHtml(buf, label);
+      const table = await renderXlsxHtml(buf, label, ctx.filterable);
       if (table) {
         ctx.stats.embeddedSheets++;
         return table;
@@ -482,8 +534,8 @@ async function renderHtmlRun(rNode, ctx) {
   const italic = hasOn(rPr, 'i');
   const underline = hasOn(rPr, 'u');
   const strike = hasOn(rPr, 'strike');
-  const colorEl = rPr ? findChild(rPr, 'color') : null;
-  const colorVal = colorEl ? (attr(colorEl, '@_val') || '') : '';
+  const color = runColor(rPr);
+  const highlight = runHighlight(rPr);
   const kids = childrenOf(rNode).filter((c) => nodeTag(c) !== 'rPr');
   let text = '';
   let extra = '';
@@ -502,7 +554,12 @@ async function renderHtmlRun(rNode, ctx) {
   if (strike) s = `<s>${s}</s>`;
   if (italic) s = `<em>${s}</em>`;
   if (bold) s = `<strong>${s}</strong>`;
-  if (/^[0-9A-Fa-f]{6}$/.test(colorVal)) s = `<span style="color:#${colorVal.toUpperCase()}">${s}</span>`;
+  if (color || highlight) {
+    const styles = [];
+    if (color) styles.push('color:#' + color);
+    if (highlight) styles.push('background-color:#' + highlight);
+    s = `<span style="${styles.join(';')}">${s}</span>`;
+  }
   if (extra) s += (s ? ' ' : '') + extra;
   return s;
 }
@@ -564,6 +621,13 @@ function isPureExcelParagraph(kids) {
   return ok && excelCount > 0;
 }
 
+// 「文本树」示意：用 ├ └ │ ┌ ┐ 等盒线字符画的多行树状/结构图。
+// 这类内容在 Markdown 里，行间换行会被 marked 折叠成空格、行首缩进空格也会被 HTML 折叠，
+// 竖线与对齐随之被破坏；识别后应整体放进代码块，用等宽字体 + white-space:pre 原样保留。
+function isTextTree(text) {
+  return text.includes('\n') && /[─-╿]/.test(text);
+}
+
 async function renderParagraph(pNode, ctx) {
   const pPr = findChild(pNode, 'pPr');
   const kids = childrenOf(pNode).filter((c) => nodeTag(c) !== 'pPr');
@@ -615,7 +679,10 @@ async function renderParagraph(pNode, ctx) {
 
   // 普通段落
   const text = (await renderInlines(kids, ctx)).trim();
-  return text || '';
+  if (!text) return '';
+  // 文本树（├ └ │ 画的多行树状图）：放进代码块，避免换行/缩进被折叠破坏结构
+  if (isTextTree(text)) return '```text\n' + text + '\n```';
+  return text;
 }
 
 // ===================== 表格渲染 =====================
@@ -939,7 +1006,7 @@ async function renderHtmlTable(tblNode, ctx) {
   // 筛选项列数上限 25 列（超出取前 25 列）
   if (filterCols.length > 25) { filterCols.length = 25; filterLabels.length = 25; }
   const dataRowCount = headerIdx >= 0 ? grid.length - headerIdx - 1 : 0;
-  const filterable = dataRowCount > 15 && filterCols.length > 0;
+  const filterable = ctx.filterable !== false && dataRowCount > 15 && filterCols.length > 0;
 
   const tableAttrs = [];
   if (filterable) {
@@ -1099,7 +1166,7 @@ function trimSheetHtml(rows, merges) {
   return { rows: newRows, merges: newMerges };
 }
 
-function renderXlsxHtmlTable(rows, merges) {
+function renderXlsxHtmlTable(rows, merges, allowFilter) {
   const H = rows.length;
   const W = rows[0].length;
   const covered = {};
@@ -1141,7 +1208,7 @@ function renderXlsxHtmlTable(rows, merges) {
   // 筛选项列数上限 25 列（超出取前 25 列）
   if (filterCols.length > 25) { filterCols.length = 25; filterLabels.length = 25; }
   const dataRowCount = headerIdx >= 0 ? H - headerIdx - 1 : 0;
-  const filterable = dataRowCount > 15 && filterCols.length > 0;
+  const filterable = allowFilter !== false && dataRowCount > 15 && filterCols.length > 0;
 
   const tableAttrs = [];
   if (filterable) {
@@ -1182,7 +1249,7 @@ function renderXlsxHtmlTable(rows, merges) {
   return lines.join('\n');
 }
 
-async function renderXlsxHtml(buf, label) {
+async function renderXlsxHtml(buf, label, allowFilter) {
   const zip = await JSZip.loadAsync(buf);
   const shared = parseSharedStrings(await zipString(zip, 'xl/sharedStrings.xml'));
   const sheetXml = await zipString(zip, pickSheet(zip));
@@ -1191,7 +1258,7 @@ async function renderXlsxHtml(buf, label) {
   if (!parsed || !parsed.rows.length) return '';
   const { rows, merges } = trimSheetHtml(parsed.rows, parsed.merges);
   if (!rows.length) return '';
-  const table = renderXlsxHtmlTable(rows, merges);
+  const table = renderXlsxHtmlTable(rows, merges, allowFilter);
   return `<p><strong>嵌入表格（${escapeHtml(label)}）</strong></p>\n${table}`;
 }
 
@@ -1249,6 +1316,7 @@ async function convertDocxToMarkdown(docxPath, opts) {
     imageOrder: [],
     counters: {},
     htmlTables: !!opts.htmlTables,
+    filterable: opts.filterable !== false,
     stats: { headings: 0, tables: 0, embeddedSheets: 0, images: 0, hyperlinks: 0 }
   };
 
@@ -1264,8 +1332,8 @@ async function convertDocxToMarkdown(docxPath, opts) {
 }
 
 // Word → HTML：与 markdown 版共用同一套遍历，区别是表格/嵌入 Excel 直接输出 HTML（保留颜色与合并）
-async function convertDocxToHtml(docxPath) {
-  return convertDocxToMarkdown(docxPath, { htmlTables: true });
+async function convertDocxToHtml(docxPath, opts) {
+  return convertDocxToMarkdown(docxPath, Object.assign({ htmlTables: true }, opts || {}));
 }
 
 module.exports = { convertDocxToMarkdown, convertDocxToHtml };

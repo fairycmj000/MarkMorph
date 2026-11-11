@@ -266,6 +266,7 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   #toc .lvl-3 { font-size: 12px; }
   #toc .lvl-4 { font-size: 11.5px; color: #6a737d; }
   #toc .lvl-5 { font-size: 11px; color: #8a939c; }
+  #toc .lvl-6 { font-size: 10px; color: #a0aab4; }
 
   /* 主内容区 */
   #main {
@@ -292,6 +293,7 @@ function buildHtml(mdContent, basedir, mermaidSrc) {
   h3 { font-size: 15px; margin-top: 24px; }
   h4 { font-size: 13px; margin-top: 16px; }
   h5 { font-size: 12px; margin-top: 14px; }
+  h6 { font-size: 11px; margin-top: 12px; color: #57606a; }
   p { margin: 8px 0; }
   ul, ol { padding-left: 24px; }
   li { margin: 3px 0; }
@@ -668,7 +670,7 @@ ${bodyHtml}
   (function() {
     var toc = document.getElementById('toc');
     var tocWrapper = document.getElementById('toc-wrapper');
-    var headings = Array.from(document.querySelectorAll('#main h1, #main h2, #main h3, #main h4, #main h5'));
+    var headings = Array.from(document.querySelectorAll('#main h1, #main h2, #main h3, #main h4, #main h5, #main h6'));
     var tocItems = [];
 
     headings.forEach(function(h, i) {
@@ -678,11 +680,23 @@ ${bodyHtml}
     // 滚动到目标标题：手动计算 scrollTop 以兼容正文 zoom 缩放（scrollIntoView 在 zoom 下会定位偏差）
     function scrollToTarget(el) {
       var scrollEl = document.scrollingElement || document.documentElement;
-      var current = window.pageYOffset || scrollEl.scrollTop || document.documentElement.scrollTop || 0;
-      var margin = 0;
-      try { margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0; } catch (e) {}
-      var top = el.getBoundingClientRect().top + current - margin;
-      window.scrollTo({ top: top, behavior: 'smooth' });
+      function getCurrent() {
+        return window.pageYOffset || scrollEl.scrollTop || document.documentElement.scrollTop || 0;
+      }
+      function getTarget() {
+        var margin = 0;
+        try { margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0; } catch (e) {}
+        return el.getBoundingClientRect().top + getCurrent() - margin;
+      }
+      window.scrollTo({ top: getTarget(), behavior: 'smooth' });
+      // 平滑滚动结束若仍有取整/缩放误差，就再精确定位一次（距目标过远说明用户已手动滚动，则放弃校正）
+      function finalize() {
+        var t = getTarget();
+        var d = Math.abs(t - getCurrent());
+        if (d > 2 && d <= 200) window.scrollTo({ top: t, behavior: 'auto' });
+      }
+      if ('onscrollend' in window) window.addEventListener('scrollend', finalize, { once: true });
+      else setTimeout(finalize, 450);
     }
 
     // 按标题层级构建目录树（虚拟根 level=0），支持逐级折叠/展开
@@ -1428,6 +1442,7 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   #toc .toc-sub .lvl-3 { padding-left: 40px; font-size: 11.5px; }
   #toc .toc-sub .lvl-4 { padding-left: 54px; font-size: 11px; color: #6a737d; }
   #toc .toc-sub .lvl-5 { padding-left: 68px; font-size: 10.5px; color: #8a939c; }
+  #toc .toc-sub .lvl-6 { padding-left: 82px; font-size: 10px; color: #a0aab4; }
 
   /* 主内容区 */
   #main {
@@ -1464,6 +1479,7 @@ function buildMergedHtml(files, mermaidSrc, editable) {
   h3 { font-size: 15px; margin-top: 24px; }
   h4 { font-size: 13px; margin-top: 16px; }
   h5 { font-size: 12px; margin-top: 14px; }
+  h6 { font-size: 11px; margin-top: 12px; color: #57606a; }
   p { margin: 8px 0; }
   ul, ol { padding-left: 24px; }
   li { margin: 3px 0; }
@@ -1763,11 +1779,23 @@ ${sectionsHtml}
     // 滚动到目标：手动计算 scrollTop 以兼容正文 zoom 缩放（scrollIntoView 在 zoom 下会定位偏差）
     function scrollToTarget(el) {
       var scrollEl = document.scrollingElement || document.documentElement;
-      var current = window.pageYOffset || scrollEl.scrollTop || document.documentElement.scrollTop || 0;
-      var margin = 0;
-      try { margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0; } catch (e) {}
-      var top = el.getBoundingClientRect().top + current - margin;
-      window.scrollTo({ top: top, behavior: 'smooth' });
+      function getCurrent() {
+        return window.pageYOffset || scrollEl.scrollTop || document.documentElement.scrollTop || 0;
+      }
+      function getTarget() {
+        var margin = 0;
+        try { margin = parseFloat(getComputedStyle(el).scrollMarginTop) || 0; } catch (e) {}
+        return el.getBoundingClientRect().top + getCurrent() - margin;
+      }
+      window.scrollTo({ top: getTarget(), behavior: 'smooth' });
+      // 平滑滚动结束若仍有取整/缩放误差，就再精确定位一次（距目标过远说明用户已手动滚动，则放弃校正）
+      function finalize() {
+        var t = getTarget();
+        var d = Math.abs(t - getCurrent());
+        if (d > 2 && d <= 200) window.scrollTo({ top: t, behavior: 'auto' });
+      }
+      if ('onscrollend' in window) window.addEventListener('scrollend', finalize, { once: true });
+      else setTimeout(finalize, 450);
     }
 
     function switchTo(docIdx) {
@@ -1888,7 +1916,7 @@ ${sectionsHtml}
 
         var sub = document.createElement('ul');
         sub.className = 'toc-sub';
-        var headings = sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4, .doc-body h5');
+        var headings = sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4, .doc-body h5, .doc-body h6');
         headings.forEach(function(h, i) {
           if (!h.id) h.id = 'doc-' + docIdx + '-h-' + i;
           var level = parseInt(h.tagName.substring(1), 10);
@@ -1914,7 +1942,7 @@ ${sectionsHtml}
 
     function currentHeadings() {
       var sec = sections[active];
-      return sec ? sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4, .doc-body h5') : [];
+      return sec ? sec.querySelectorAll('.doc-body h1, .doc-body h2, .doc-body h3, .doc-body h4, .doc-body h5, .doc-body h6') : [];
     }
 
     function updateActiveToc() {
@@ -2382,6 +2410,30 @@ function hasWideTable(mdContent, threshold = 4) {
     if (token.type === 'table' && token.header && token.header.length > threshold) {
       return true;
     }
+  }
+  // Word 转换输出的是原生 HTML 表格（marked 会当作 html 块而非 table），单独按 <table> 行内单元格列数判断
+  return hasWideHtmlTable(mdContent, threshold);
+}
+
+// 判断内容里是否存在「宽表」——按每个 <table> 中列数最多的一行（含 colspan 展开）是否超过阈值
+function hasWideHtmlTable(mdContent, threshold = 4) {
+  const tableRe = /<table\b[\s\S]*?<\/table>/gi;
+  let m;
+  while ((m = tableRe.exec(mdContent))) {
+    let maxCols = 0;
+    const rowRe = /<tr\b[\s\S]*?<\/tr>/gi;
+    let r;
+    while ((r = rowRe.exec(m[0]))) {
+      let cols = 0;
+      const cellRe = /<t[hd]\b[^>]*>/gi;
+      let c;
+      while ((c = cellRe.exec(r[0]))) {
+        const span = (c[0].match(/colspan="(\d+)"/) || [])[1];
+        cols += span ? parseInt(span, 10) : 1;
+      }
+      if (cols > maxCols) maxCols = cols;
+    }
+    if (maxCols > threshold) return true;
   }
   return false;
 }

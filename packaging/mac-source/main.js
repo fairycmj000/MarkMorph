@@ -1091,10 +1091,10 @@ ipcMain.handle('convert-docx-to-md', async (event, srcPath) => {
 });
 
 // 转换：Word (.docx) → 预览 HTML（Word→HTML 专用：表格/嵌入 Excel 输出为带颜色与合并的原生 HTML）
-ipcMain.handle('convert-docx-to-html', async (event, srcPath) => {
+ipcMain.handle('convert-docx-to-html', async (event, srcPath, opts) => {
   try {
     safeLog('convert-docx-to-html handler called, srcPath:', srcPath);
-    const { markdown, images, stats } = await convertDocxToHtml(srcPath);
+    const { markdown, images, stats } = await convertDocxToHtml(srcPath, opts);
     const baseName = path.basename(srcPath, path.extname(srcPath));
     const html = buildHtml(inlineDocxImages(markdown, images), '');
     safeLog('convert-docx-to-html done, stats:', stats);
@@ -1174,6 +1174,75 @@ ipcMain.handle('save-docx-html', async (event, srcPath, editedHtml) => {
     return { success: true, filePath };
   } catch (error) {
     safeLog('save-docx-html error:', error);
+    throw error;
+  }
+});
+
+// 保存：Word (.docx) → PDF（复用 Word→HTML 的高保真 HTML，经 printToPDF 输出并加书签）
+ipcMain.handle('save-docx-pdf', async (event, srcPath) => {
+  try {
+    safeLog('save-docx-pdf handler called, srcPath:', srcPath);
+    const baseName = path.basename(srcPath, path.extname(srcPath));
+    const { markdown, images } = await convertDocxToHtml(srcPath, { filterable: false });
+    const md = inlineDocxImages(markdown, images);
+    const html = buildHtml(md, '');
+    const headings = extractHeadings(md);
+
+    const hidden = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
+    try {
+      await loadHtmlIntoWindow(hidden, html);
+
+      // 等待 mermaid 渲染完成（最多 15 秒）
+      await hidden.webContents.executeJavaScript(`
+        new Promise((resolve) => {
+          const check = () => {
+            const divs = document.querySelectorAll('.mermaid');
+            if (divs.length === 0 || Array.from(divs).every(d => d.querySelector('svg'))) {
+              resolve();
+            } else {
+              setTimeout(check, 200);
+            }
+          };
+          setTimeout(check, 500);
+        })
+      `);
+
+      // 获取每个标题在页面中的 Y 坐标（像素）及文档总高度，用于 PDF 书签
+      const headingData = await hidden.webContents.executeJavaScript(`
+        (() => {
+          const hs = document.querySelectorAll('#main h1, #main h2, #main h3, #main h4, #main h5, #main h6');
+          return {
+            totalHeight: document.documentElement.scrollHeight,
+            headings: Array.from(hs).map(h => ({
+              top: h.getBoundingClientRect().top + window.scrollY,
+              level: parseInt(h.tagName.substring(1)),
+              text: h.textContent
+            }))
+          };
+        })()
+      `);
+
+      const pdfBuffer = await hidden.webContents.printToPDF({
+        pageSize: hasWideTable(md) ? 'A3' : 'A4',
+        marginType: 'default',
+        printBackground: true
+      });
+      const pdfWithBookmarks = await addBookmarks(pdfBuffer, headingData.headings, headingData.totalHeight);
+
+      const { filePath, canceled } = await dialog.showSaveDialog({
+        defaultPath: baseName + '.pdf',
+        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+      });
+      if (canceled || !filePath) return { success: false };
+
+      fs.writeFileSync(filePath, pdfWithBookmarks);
+      safeLog('save-docx-pdf done:', filePath);
+      return { success: true, filePath };
+    } finally {
+      hidden.destroy();
+    }
+  } catch (error) {
+    safeLog('save-docx-pdf error:', error);
     throw error;
   }
 });

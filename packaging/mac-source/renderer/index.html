@@ -153,6 +153,7 @@
   .card-merge .badge { background: linear-gradient(135deg, #e8d8ff, #d8c8ff); color: #5a3a8a; border: 1px solid rgba(120,80,180,0.15); }
   .card-docx .badge { background: linear-gradient(135deg, #d0f0e0, #b8e8d0); color: #2a6a4a; border: 1px solid rgba(40,140,80,0.15); }
   .card-docx-html .badge { background: linear-gradient(135deg, #d0f0f0, #b8e8e8); color: #1a6a6a; border: 1px solid rgba(40,160,160,0.15); }
+  .card-docx-pdf .badge { background: linear-gradient(135deg, #ffe0e0, #ffc8c8); color: #a02a2a; border: 1px solid rgba(180,40,40,0.15); }
 
   .drop-zone {
     border: none;
@@ -838,6 +839,11 @@
     </div>
     <div class="help-body">
       <h2>最新更新</h2>
+      <p><b>Word → PDF / 正文颜色·高亮还原</b></p>
+      <ul>
+        <li><b>新增 Word → PDF 入口</b>：把 <code>.docx</code> 高保真转换为 <code>.pdf</code>（还原表格颜色/合并、嵌入 Excel、图片、流程图、文本树，自动生成书签目录，宽表自动 A3）</li>
+        <li><b>正文文字颜色 / 高亮（底纹）也还原</b>：Word → HTML / MD / PDF 三条链路都保留正文普通段落的字体色与高亮底纹</li>
+      </ul>
       <p><b>搜索与替换</b></p>
       <ul>
         <li><b>搜索定位</b>：预览中按 <b>Ctrl+F</b>（或点 🔍）呼出搜索框，关键字逐条高亮定位</li>
@@ -854,13 +860,14 @@
       </ul>
 
       <h2>一、快速上手</h2>
-      <p>窗口内有六个入口，默认按 <b>2 列</b>排列（共三行）：</p>
+      <p>窗口内有七个入口，默认按 <b>2 列</b>排列（共四行）：</p>
       <ul>
         <li><b>MD → PDF</b>：先预览排版，再下载 PDF（自动生成书签目录）</li>
         <li><b>MD → HTML</b>：转换为网页并自动在浏览器中打开</li>
         <li><b>MD → Word</b>：转换为 <code>.docx</code>，可用 Word / WPS 继续编辑</li>
         <li><b>Word → MD</b>：把 <code>.docx</code> 无损转换为 <code>.md</code>，图片提取到 <code>assets/</code> 子文件夹，嵌入的 Excel 电子表格渲染为表格，预览确认后下载</li>
         <li><b>Word → HTML</b>：把 <code>.docx</code> 无损转换为 <code>.html</code>（图片内联、单文件自包含），预览确认后下载并在浏览器打开</li>
+        <li><b>Word → PDF</b>：把 <code>.docx</code> 高保真转换为 <code>.pdf</code>（还原表格颜色/合并、嵌入 Excel、图片、流程图、文本树），预览确认后下载</li>
         <li><b>多文件</b>：多个 <code>.md</code> 分屏并列预览，可编辑保存，并合并下载为 HTML / PDF / Word</li>
       </ul>
       <p>每个入口都支持两种选文件方式：把文件<b>拖入</b>对应区域，或<b>点击</b>该区域后在弹窗中选择文件。</p>
@@ -1020,6 +1027,19 @@
       </div>
     </div>
     <div class="status hidden" id="statusDocxHtml"></div>
+  </div>
+
+  <div class="card card-docx-pdf">
+    <div class="card-title">Word → PDF <span class="badge">PDF</span></div>
+    <div class="drop-zone" id="dropZoneDocxPdf">
+      <input type="file" id="fileInputDocxPdf" accept=".docx">
+      <div class="drop-icon">📄</div>
+      <div class="drop-text">
+        拖入或点击选择 .docx 文件
+        <span>高保真转换为 PDF 文档</span>
+      </div>
+    </div>
+    <div class="status hidden" id="statusDocxPdf"></div>
   </div>
 
   <div class="card card-merge">
@@ -1303,6 +1323,38 @@
     }
   }
 
+  // Word → PDF 入口：预览复用 Word→HTML 的高保真 HTML，下载阶段经 printToPDF 输出 .pdf
+  async function handleDocxPdf(file, statusEl) {
+    if (!file || !file.name.toLowerCase().endsWith('.docx')) {
+      setStatus(statusEl, 'error', '请选择 .docx 格式文件');
+      return;
+    }
+    setStatus(statusEl, 'loading', '<div class="spinner"></div> 解析 Word 文档...');
+    try {
+      const srcPath = safeGetFilePath(file);
+      const r = await window.api.convertDocxToHtml(srcPath, { filterable: false });
+      if (!r || r.error) {
+        setStatus(statusEl, 'error', (r && r.error) ? r.error : '转换失败');
+        return;
+      }
+      setPreviewMode('single');
+      loadFrame(previewFrame, r.html);
+      previewFilename.textContent = (r.baseName || '文档') + '.pdf';
+      downloadBtn.textContent = '下载 PDF';
+      previewPanel.classList.add('open');
+      document.body.classList.add('has-preview');
+      editBtn.hidden = true;   // PDF 由中间 HTML 打印生成，不提供 HTML 源码编辑
+      const s = r.stats || {};
+      setStatus(statusEl, 'success',
+        '预览就绪（标题 ' + (s.headings || 0) + ' · 表格 ' + (s.tables || 0) +
+        ' · 嵌入表格 ' + (s.embeddedSheets || 0) + ' · 图片 ' + (s.images || 0) +
+        ' · 链接 ' + (s.hyperlinks || 0) + '），点击「下载 PDF」生成并保存');
+      previewPanel._pendingTask = { type: 'docxPdf', srcPath, statusEl, baseName: r.baseName };
+    } catch (err) {
+      setStatus(statusEl, 'error', err.message);
+    }
+  }
+
   function readFile(file) {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -1527,6 +1579,43 @@
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
+  // 文本节点最近的块级容器：搜索以块为单位，跨行内元素（<strong>/<em>/<a>/<code>/<span>…）边界也能命中
+  function nearestSearchBlock(node) {
+    let el = node.parentElement;
+    while (el) {
+      const tag = el.nodeName;
+      if (tag === 'P' || tag === 'LI' || tag === 'TD' || tag === 'TH' || tag === 'PRE' ||
+          tag === 'BLOCKQUOTE' || tag === 'FIGCAPTION' || tag === 'CAPTION' || tag === 'DT' || tag === 'DD' ||
+          (tag.length === 2 && tag[0] === 'H' && tag[1] >= '1' && tag[1] <= '6')) {
+        return el;
+      }
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  // 在单个文本节点内按升序、非重叠的 ranges（[start,end]）一次性包 <mark>，返回按序生成的 mark 元素
+  function wrapNodeRanges(doc, node, ranges) {
+    const text = node.textContent;
+    const parent = node.parentNode;
+    if (!parent) return [];
+    const frag = doc.createDocumentFragment();
+    let pos = 0;
+    const marks = [];
+    for (const [s, e] of ranges) {
+      if (s > pos) frag.appendChild(doc.createTextNode(text.slice(pos, s)));
+      const mark = doc.createElement('mark');
+      mark.className = 'mm-search-hit';
+      mark.textContent = text.slice(s, e);
+      frag.appendChild(mark);
+      marks.push(mark);
+      pos = e;
+    }
+    if (pos < text.length) frag.appendChild(doc.createTextNode(text.slice(pos)));
+    parent.replaceChild(frag, node);
+    return marks;
+  }
+
   function clearSearchHighlights() {
     if (searchMode() === 'iframe') {
       const doc = searchDoc();
@@ -1575,9 +1664,14 @@
       editor.setSelectionRange(m.start, m.end);
       scrollEditorToSelection();
     } else {
-      searchMatches.forEach(mk => mk.classList.remove('mm-search-current'));
-      m.classList.add('mm-search-current');
-      try { m.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { m.scrollIntoView(); }
+      const anchor = (m.marks && m.marks.length) ? m.marks[0] : m;
+      searchMatches.forEach(match => {
+        const marks = match.marks || [match];
+        marks.forEach(el => el.classList.remove('mm-search-current'));
+      });
+      const marks = m.marks || [m];
+      marks.forEach(el => el.classList.add('mm-search-current'));
+      try { anchor.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (e) { anchor.scrollIntoView(); }
     }
   }
 
@@ -1622,7 +1716,6 @@
         doc.head.appendChild(style);
       }
 
-      const re = new RegExp(escapeRegExp(q), 'gi');
       const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
         acceptNode(node) {
           if (!node.textContent) return NodeFilter.FILTER_REJECT;
@@ -1637,27 +1730,65 @@
       const textNodes = [];
       while (walker.nextNode()) textNodes.push(walker.currentNode);
 
+      // 按块级容器分组，块内拼接全文后跨行内元素边界匹配
+      const blocks = new Map();
       for (const node of textNodes) {
-        const text = node.textContent;
-        re.lastIndex = 0;
-        let m, lastIndex = 0, matched = false;
-        const frag = doc.createDocumentFragment();
-        while ((m = re.exec(text)) !== null) {
-          matched = true;
-          if (m.index > lastIndex) frag.appendChild(doc.createTextNode(text.slice(lastIndex, m.index)));
-          const mark = doc.createElement('mark');
-          mark.className = 'mm-search-hit';
-          mark.textContent = m[0];
-          frag.appendChild(mark);
-          lastIndex = m.index + m[0].length;
-          if (m[0].length === 0) re.lastIndex++;
-        }
-        if (!matched) continue;
-        if (lastIndex < text.length) frag.appendChild(doc.createTextNode(text.slice(lastIndex)));
-        if (node.parentNode) node.parentNode.replaceChild(frag, node);
+        const b = nearestSearchBlock(node) || node;
+        if (!blocks.has(b)) blocks.set(b, []);
+        blocks.get(b).push(node);
       }
 
-      searchMatches = Array.from(doc.querySelectorAll('mark.mm-search-hit'));
+      const re = new RegExp(escapeRegExp(q), 'gi');
+      const groups = []; // 每个逻辑命中项：{ marks: [...] }（一个短语跨多个行内元素时，组内多个 <mark>）
+
+      for (const [, nodes] of blocks) {
+        const parts = nodes.map(n => n.textContent);
+        const full = parts.join('');
+        if (!full) continue;
+
+        // charMap[i] => { node, offset }（UTF-16 码元索引，与正则 exec 对齐）
+        const charMap = [];
+        nodes.forEach((n, ni) => {
+          const t = parts[ni];
+          for (let k = 0; k < t.length; k++) charMap.push({ node: n, offset: k });
+        });
+
+        const ranges = [];
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(full)) !== null) {
+          if (m[0].length === 0) { re.lastIndex++; continue; }
+          ranges.push([m.index, m.index + m[0].length]);
+        }
+        if (!ranges.length) continue;
+
+        // 每个命中范围拆成「每节点一段」，并关联到所属逻辑命中组
+        const segsByNode = new Map();
+        ranges.forEach(range => {
+          const group = { marks: [] };
+          groups.push(group);
+          const [rs, reIdx] = range;
+          let i = rs;
+          while (i < reIdx) {
+            const { node, offset } = charMap[i];
+            let j = i;
+            while (j < reIdx && charMap[j].node === node) j++;
+            const seg = { start: offset, end: offset + (j - i), group };
+            if (!segsByNode.has(node)) segsByNode.set(node, []);
+            segsByNode.get(node).push(seg);
+            i = j;
+          }
+        });
+
+        // 逐节点一次性包裹其全部命中段（升序、非重叠）
+        for (const [node, segs] of segsByNode) {
+          segs.sort((a, b) => a.start - b.start);
+          const marks = wrapNodeRanges(doc, node, segs.map(s => [s.start, s.end]));
+          segs.forEach((s, idx) => s.group.marks.push(marks[idx]));
+        }
+      }
+
+      searchMatches = groups;
     }
     searchIndex = -1;
   }
@@ -2310,6 +2441,28 @@
         downloadBtn.disabled = false;
         downloadBtn.textContent = '下载 HTML';
       }
+    } else if (task.type === 'docxPdf') {
+      downloadDone = false;
+      downloadIdleLabel = '下载 PDF';
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = '生成中...';
+      setStatus(task.statusEl, 'loading', '<div class="spinner"></div> 生成 PDF...');
+
+      try {
+        const result = await window.api.saveDocxPdf(task.srcPath);
+        if (result.success) {
+          setStatus(task.statusEl, 'success', '已下载：' + result.filePath.split('\\').pop());
+          markDownloadComplete(result.filePath);
+        } else {
+          setStatus(task.statusEl, 'error', '已取消');
+          downloadBtn.disabled = false;
+          downloadBtn.textContent = '下载 PDF';
+        }
+      } catch (err) {
+        setStatus(task.statusEl, 'error', err.message);
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '下载 PDF';
+      }
     }
   });
 
@@ -2342,6 +2495,12 @@
     document.getElementById('fileInputDocxHtml'),
     document.getElementById('statusDocxHtml'),
     handleDocxHtml
+  );
+  setupDropZone(
+    document.getElementById('dropZoneDocxPdf'),
+    document.getElementById('fileInputDocxPdf'),
+    document.getElementById('statusDocxPdf'),
+    handleDocxPdf
   );
 
   // ====== 多文件（第 4 个上传入口）：分屏预览 + 合并下载 ======
